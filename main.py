@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-import json
-import os
-
 __all__ = ["laziest_farmer", "_opponent_tracker"]
 
 
@@ -16,24 +13,12 @@ def laziest_farmer(obs):
 
 # ---- Opponent tracking ----
 
-_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "opponent_cache.json")
-
-
-def _load_cache() -> dict:
-    try:
-        with open(_CACHE_PATH) as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-
-def _save_cache(data) -> None:
-    with open(_CACHE_PATH, "w") as f:
-        json.dump(data, f)
+_opponent_cache = {}  # in-memory only: resets on process start, i.e. per match
 
 
 def _opponent_tracker(obs) -> dict:
+    global _opponent_cache
     current = obs["farms"][1 - obs["player"]]
-    previous = _load_cache()
-    _save_cache(current)
-    return {**current, "prev_money": previous.get("money")}
+    previous = {} if obs.get("step") == 1 else _opponent_cache
+    _opponent_cache = current
+    return {**current, "prev_money": previous.get("money", current.get("money"))}
