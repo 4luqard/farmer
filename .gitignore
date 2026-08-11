@@ -1,5 +1,6 @@
 # Kaggle-provided game kit, not part of this repo's own docs
 python-kit/
-/tests/
+# /tests/
 /__pycache__/
 *.json
+/tests/__pycache__/*.pyc
