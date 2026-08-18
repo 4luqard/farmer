@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-__all__ = ["laziest_farmer", "_opponent_tracker"]
+__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions"]
 
 
 # ---- Farmer agent ----
@@ -32,3 +32,25 @@ def _opponent_tracker(obs) -> dict:
         "prev_money": previous.get("money", current.get("money")),
         "planted_count": planted_count,
     }
+
+# ---- Possible actions ----
+
+def _possible_actions(obs) -> dict:
+    farmer = ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "BUILD_COOP", "BUILD_PASTURE"]
+    for crop, count in obs.get("private", {}).get("seed", {}).items():
+        if count > 0:
+            farmer.append(["PLANT", crop])
+
+    farms = obs.get("farms", [])
+    player = obs.get("player", 0)
+    hires_today = farms[player].get("hires_today", 0) if player < len(farms) else 0
+    hands = [list(farmer) for _ in range(hires_today)]
+
+    market = [
+        "HIRE", "BUY_LAND",
+        ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+        ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+        ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+    ]
+
+    return {"farmer": farmer, "hands": hands, "market": market}
