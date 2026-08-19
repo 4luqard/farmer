@@ -48,16 +48,42 @@ def _apply_carried_inventory(actions, items):
         actions.append("DROP")
 
 
+def _quadrant(pos):
+    x, y = pos
+    return ("N" if y < 5 else "S") + ("W" if x < 5 else "E")
+
+
+def _tile_unlocked(farm, pos):
+    unlocked = farm.get("unlocked_quadrants")
+    if unlocked is None or pos is None:
+        return True
+    return _quadrant(pos) in unlocked
+
+
+def _base_actions(unlocked, seed):
+    actions = ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]
+    if unlocked:
+        actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
+        for crop, count in seed.items():
+            if count > 0:
+                actions.append(["PLANT", crop])
+    return actions
+
+
 def _possible_actions(obs) -> dict:
-    farmer = ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "BUILD_COOP", "BUILD_PASTURE"]
-    for crop, count in obs.get("private", {}).get("seed", {}).items():
-        if count > 0:
-            farmer.append(["PLANT", crop])
+    seed = obs.get("private", {}).get("seed", {})
 
     farms = obs.get("farms", [])
     player = obs.get("player", 0)
     farm = farms[player] if player < len(farms) else {}
     hires_today = farm.get("hires_today", 0)
+
+    farmer_pos = farm.get("farmer")
+    hand_positions = farm.get("hands", [])
+    hand_pos = hand_positions[0] if hand_positions else None
+
+    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed)
+    hand = _base_actions(_tile_unlocked(farm, hand_pos), seed)
 
     market = [
         "HIRE", "BUY_LAND",
@@ -67,7 +93,6 @@ def _possible_actions(obs) -> dict:
     ]
 
     shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
-    hand = list(farmer)
 
     if shed_adjacent:
         for item, count in obs.get("private", {}).get("shed", {}).items():

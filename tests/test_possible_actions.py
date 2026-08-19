@@ -104,7 +104,24 @@ def test_possible_actions():
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
-    
+
+    # When the farmer or the hand is in a locked area
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]], "unlocked_quadrants": ["NW"]}, {"hires_today": 1}],
+        "private": {"inventory": [{"WHEAT": 1}, {"CARROT": 1}], "seed": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PLACE", "WHEAT", 1], "DROP"],
+        "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   ["PLACE", "CARROT", 1], "DROP"],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }
+
     
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
