@@ -122,6 +122,50 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
+    # When there are more than 1 hires
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1]],
+                  ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1]]
+    }
+
+    # When there are more than one item
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 3}, "seed": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]],
+                  ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1], ["SELL", "WHEAT", 2], ["SELL", "WHEAT", 3]]
+    }
     
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

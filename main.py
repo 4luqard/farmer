@@ -96,10 +96,10 @@ def _possible_actions(obs) -> dict:
 
     if shed_adjacent:
         for item, count in obs.get("private", {}).get("shed", {}).items():
-            if count > 0:
-                farmer.append(["PICKUP", item, count])
-                hand.append(["PICKUP", item, count])
-                market.append(["SELL", item, count])
+            for n in range(1, count + 1):
+                farmer.append(["PICKUP", item, n])
+                hand.append(["PICKUP", item, n])
+                market.append(["SELL", item, n])
 
         carried = obs.get("private", {}).get("inventory", [])
         if carried:
@@ -107,6 +107,9 @@ def _possible_actions(obs) -> dict:
             if len(carried) > 1:
                 _apply_carried_inventory(hand, carried[1])
 
-    hands = hand if shed_adjacent and hires_today >= 1 else [list(farmer) for _ in range(hires_today)]
+    if shed_adjacent and hires_today >= 1:
+        hands = hand if hires_today == 1 else [list(hand) for _ in range(hires_today)]
+    else:
+        hands = [list(farmer) for _ in range(hires_today)]
 
     return {"farmer": farmer, "hands": hands, "market": market}
