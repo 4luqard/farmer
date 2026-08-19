@@ -80,10 +80,8 @@ def _possible_actions(obs) -> dict:
 
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
-    hand_pos = hand_positions[0] if hand_positions else None
 
     farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed)
-    hand = _base_actions(_tile_unlocked(farm, hand_pos), seed)
 
     market = [
         "HIRE", "BUY_LAND",
@@ -93,22 +91,31 @@ def _possible_actions(obs) -> dict:
     ]
 
     shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
+    shed = obs.get("private", {}).get("shed", {})
+    carried = obs.get("private", {}).get("inventory", [])
 
     if shed_adjacent:
-        for item, count in obs.get("private", {}).get("shed", {}).items():
+        for item, count in shed.items():
             for n in range(1, count + 1):
                 farmer.append(["PICKUP", item, n])
-                hand.append(["PICKUP", item, n])
                 market.append(["SELL", item, n])
-
-        carried = obs.get("private", {}).get("inventory", [])
         if carried:
             _apply_carried_inventory(farmer, carried[0])
-            if len(carried) > 1:
-                _apply_carried_inventory(hand, carried[1])
+
+    hand_lists = []
+    for i in range(hires_today):
+        hand_pos = hand_positions[i] if i < len(hand_positions) else None
+        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed)
+        if shed_adjacent:
+            for item, count in shed.items():
+                for n in range(1, count + 1):
+                    hand.append(["PICKUP", item, n])
+            if len(carried) > i + 1:
+                _apply_carried_inventory(hand, carried[i + 1])
+        hand_lists.append(hand)
 
     if shed_adjacent and hires_today >= 1:
-        hands = hand if hires_today == 1 else [list(hand) for _ in range(hires_today)]
+        hands = hand_lists[0] if hires_today == 1 else hand_lists
     else:
         hands = [list(farmer) for _ in range(hires_today)]
 
