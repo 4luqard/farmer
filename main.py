@@ -57,7 +57,7 @@ def _possible_actions(obs) -> dict:
     ]
 
     if tuple(farm.get("farmer", [])) in _SHED_ADJACENT:
-        for item, count in obs.get("private", {}).get("inventory", {}).items():
+        for item, count in obs.get("private", {}).get("shed", {}).items():
             if count > 0:
                 farmer.append(["PICKUP", item, count])
                 market.append(["SELL", item, count])

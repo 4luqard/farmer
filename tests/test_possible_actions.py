@@ -56,7 +56,7 @@ def test_possible_actions():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"inventory": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
+        "private": {"shed": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
