@@ -35,6 +35,9 @@ def _opponent_tracker(obs) -> dict:
 
 # ---- Possible actions ----
 
+_SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
+
+
 def _possible_actions(obs) -> dict:
     farmer = ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "BUILD_COOP", "BUILD_PASTURE"]
     for crop, count in obs.get("private", {}).get("seed", {}).items():
@@ -43,8 +46,8 @@ def _possible_actions(obs) -> dict:
 
     farms = obs.get("farms", [])
     player = obs.get("player", 0)
-    hires_today = farms[player].get("hires_today", 0) if player < len(farms) else 0
-    hands = [list(farmer) for _ in range(hires_today)]
+    farm = farms[player] if player < len(farms) else {}
+    hires_today = farm.get("hires_today", 0)
 
     market = [
         "HIRE", "BUY_LAND",
@@ -52,5 +55,13 @@ def _possible_actions(obs) -> dict:
         ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
         ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
     ]
+
+    if tuple(farm.get("farmer", [])) in _SHED_ADJACENT:
+        for item, count in obs.get("private", {}).get("inventory", {}).items():
+            if count > 0:
+                farmer.append(["PICKUP", item, count])
+                market.append(["SELL", item, count])
+
+    hands = [list(farmer) for _ in range(hires_today)]
 
     return {"farmer": farmer, "hands": hands, "market": market}
