@@ -38,6 +38,16 @@ def _opponent_tracker(obs) -> dict:
 _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
 
 
+def _apply_carried_inventory(actions, items):
+    dropped = False
+    for item, count in items.items():
+        if count > 0:
+            actions.append(["PLACE", item, count])
+            dropped = True
+    if dropped:
+        actions.append("DROP")
+
+
 def _possible_actions(obs) -> dict:
     farmer = ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "BUILD_COOP", "BUILD_PASTURE"]
     for crop, count in obs.get("private", {}).get("seed", {}).items():
@@ -56,22 +66,22 @@ def _possible_actions(obs) -> dict:
         ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
     ]
 
-    if tuple(farm.get("farmer", [])) in _SHED_ADJACENT:
+    shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
+    hand = list(farmer)
+
+    if shed_adjacent:
         for item, count in obs.get("private", {}).get("shed", {}).items():
             if count > 0:
                 farmer.append(["PICKUP", item, count])
+                hand.append(["PICKUP", item, count])
                 market.append(["SELL", item, count])
 
         carried = obs.get("private", {}).get("inventory", [])
         if carried:
-            dropped = False
-            for item, count in carried[0].items():
-                if count > 0:
-                    farmer.append(["PLACE", item, count])
-                    dropped = True
-            if dropped:
-                farmer.append("DROP")
+            _apply_carried_inventory(farmer, carried[0])
+            if len(carried) > 1:
+                _apply_carried_inventory(hand, carried[1])
 
-    hands = [list(farmer) for _ in range(hires_today)]
+    hands = hand if shed_adjacent and hires_today >= 1 else [list(farmer) for _ in range(hires_today)]
 
     return {"farmer": farmer, "hands": hands, "market": market}

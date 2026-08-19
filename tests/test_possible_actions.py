@@ -55,13 +55,15 @@ def test_possible_actions():
     # When there is a product in the shed
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
+        "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
         "private": {"shed": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]],
-        "hands": [],
+        "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
@@ -69,7 +71,7 @@ def test_possible_actions():
                    ["SELL", "WHEAT", 1]]
     }
 
-    # When there is a product in the inventory of a farmer or hand
+    # When there is a product in the inventory of a farmer
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
@@ -79,6 +81,24 @@ def test_possible_actions():
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": [],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }
+
+    # When there is a product in the inventory of a farmer and hand
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]]}, {"hires_today": 1}],
+        "private": {"inventory": [{"WHEAT": 1}, {"CARROT": 1}], "seed": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PLACE", "WHEAT", 1], "DROP"],
+        "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PLACE", "CARROT", 1], "DROP"],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
