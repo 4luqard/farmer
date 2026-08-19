@@ -62,6 +62,16 @@ def _possible_actions(obs) -> dict:
                 farmer.append(["PICKUP", item, count])
                 market.append(["SELL", item, count])
 
+        carried = obs.get("private", {}).get("inventory", [])
+        if carried:
+            dropped = False
+            for item, count in carried[0].items():
+                if count > 0:
+                    farmer.append(["PLACE", item, count])
+                    dropped = True
+            if dropped:
+                farmer.append("DROP")
+
     hands = [list(farmer) for _ in range(hires_today)]
 
     return {"farmer": farmer, "hands": hands, "market": market}
