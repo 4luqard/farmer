@@ -114,9 +114,9 @@ def _possible_actions(obs) -> dict:
                 _apply_carried_inventory(hand, carried[i + 1])
         hand_lists.append(hand)
 
-    if shed_adjacent and hires_today >= 1:
-        hands = hand_lists[0] if hires_today == 1 else hand_lists
+    if shed_adjacent and hires_today == 1:
+        hands = hand_lists[0]
     else:
-        hands = [list(farmer) for _ in range(hires_today)]
+        hands = hand_lists
 
     return {"farmer": farmer, "hands": hands, "market": market}
