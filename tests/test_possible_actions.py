@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import pytest
-import numpy as np
 import os
 import sys
 
@@ -44,8 +43,8 @@ def plant_tile(y, x, crop="WHEAT", plntd_dy=0,
     }
     return tiles
 
-def test_possible_actions():
-    # What actions the farmer can take in the first step
+def test_first_step():
+    """What actions the farmer can take in the first step"""
     assert _possible_actions({"step": 0}) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE"],
@@ -56,7 +55,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When there is a seed
+
+def test_seed_enables_plant_action():
+    """When there is a seed"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0}, {"hires_today": 1}],
@@ -70,8 +71,10 @@ def test_possible_actions():
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
-    
-    # When there is a hired hand
+
+
+def test_hired_hand_gets_own_actions():
+    """When there is a hired hand"""
     assert _possible_actions({
         "player": 1,
         "farms": [{"hires_today": 0}, {"hires_today": 1}],
@@ -87,7 +90,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When there is a product in the shed
+
+def test_product_in_shed():
+    """When there is a product in the shed"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
@@ -106,7 +111,9 @@ def test_possible_actions():
                    ["SELL", "WHEAT", 1]]
     }
 
-    # When there is a product in the inventory of a farmer
+
+def test_product_in_farmer_inventory():
+    """When there is a product in the inventory of a farmer"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
@@ -122,7 +129,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When there is a product in the inventory of a farmer and hand
+
+def test_product_in_farmer_and_hand_inventory():
+    """When there is a product in the inventory of a farmer and hand"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]]}, {"hires_today": 1}],
@@ -140,7 +149,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When the farmer or the hand is in a locked area
+
+def test_unit_in_locked_area():
+    """When the farmer or the hand is in a locked area"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]], "unlocked_quadrants": ["NW"]}, {"hires_today": 1}],
@@ -157,7 +168,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When there are more than 1 hires
+
+def test_multiple_hires():
+    """When there are more than 1 hires"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
@@ -179,7 +192,9 @@ def test_possible_actions():
                    ["SELL", "WHEAT", 1]]
     }
 
-    # When there are more than one item
+
+def test_multiple_item_counts():
+    """When there are more than one item"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
@@ -201,7 +216,9 @@ def test_possible_actions():
                    ["SELL", "WHEAT", 1], ["SELL", "WHEAT", 2], ["SELL", "WHEAT", 3]]
     }
 
-    # When the hands are in different squares
+
+def test_hands_in_different_squares():
+    """When the hands are in different squares"""
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4], "hands": [[5, 4], [4, 5]], "unlocked_quadrants": ["NW", "NE"]}, {"hires_today": 1}],
@@ -220,7 +237,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When the farmer is standing on a tile containing weed
+
+def test_farmer_on_weed_tile():
+    """When the farmer is standing on a tile containing weed"""
     assert _possible_actions({
         "player": 0,
         "farms": [
@@ -238,7 +257,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When the farmer is standing on a tile containing a given plant
+
+def test_farmer_on_plant_tile():
+    """When the farmer is standing on a tile containing a given plant"""
     assert _possible_actions({
         "player": 0,
         "farms": [
@@ -256,7 +277,9 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
-    # When the farmer is standing on a tile containing a given plant and has fertilizer
+
+def test_farmer_on_plant_tile_with_fertilizer():
+    """When the farmer is standing on a tile containing a given plant and has fertilizer"""
     assert _possible_actions({
         "player": 0,
         "farms": [

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import pytest
-import numpy as np
 import os
 import sys
 
@@ -9,26 +8,32 @@ sys.path.insert(0, parent_dir)
 
 from main import *
 
-def test_opponent_tracker():
-    # Opponent's current coins
+def test_opponent_current_money():
+    """Opponent's current coins"""
     assert _opponent_tracker({
         'player': 0,
         "farms": [{"money": 2990}, {"money": 2980}]
     }).get("money") == 2980
 
-    # Opponent is player 1
+
+def test_opponent_is_player_one():
+    """Opponent is player 1"""
     assert _opponent_tracker({
         'player': 1,
         "farms": [{"money": 2990}, {"money": 2980}]
     }).get("money") == 2990
 
-    # No money key or value
+
+def test_missing_money_key():
+    """No money key or value"""
     assert _opponent_tracker({
         'player': 1,
         "farms": [{}, {"money": 2980}]
     }).get("money") == None
-    
-    # Opponent's coins in the previous step
+
+
+def test_previous_money_from_prior_step():
+    """Opponent's coins in the previous step"""
     _opponent_tracker({
         'player': 0,
         "step": 13,
@@ -40,14 +45,18 @@ def test_opponent_tracker():
         "farms": [{}, {"money": 2950}]
     }).get("prev_money") == 2980
 
-    # Previous coins at step 1 (No previous steps)
+
+def test_previous_money_at_first_step():
+    """Previous coins at step 1 (No previous steps)"""
     assert _opponent_tracker({
         'player': 0,
         "step": 0,
         "farms": [{}, {"money": 2980}]
     }).get("prev_money") == 2980
 
-    # Amount of planted crops (Empty farm)
+
+def test_planted_count_empty_farm():
+    """Amount of planted crops (Empty farm)"""
     assert _opponent_tracker({
         'player': 0,
         "farms": [{}, {
@@ -61,7 +70,9 @@ def test_opponent_tracker():
         }]
     }).get("planted_count") == 0
 
-    # Amount of planted crops
+
+def test_planted_count():
+    """Amount of planted crops"""
     assert _opponent_tracker({
         'player': 0,
         "farms": [{}, {
@@ -75,6 +86,7 @@ def test_opponent_tracker():
             ]
         }]
     }).get("planted_count") == 3
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
