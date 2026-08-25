@@ -80,6 +80,9 @@ def _base_actions(unlocked, seed, tile=None):
     if isinstance(tile, dict) and tile.get("kind") == "WEED":
         actions.append("DIG")
         return actions
+    if isinstance(tile, dict) and tile.get("kind") == "PLANT":
+        actions.extend(["WATER", "DIG"])
+        return actions
     actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
     for crop, count in seed.items():
         if count > 0:

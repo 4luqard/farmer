@@ -10,6 +10,7 @@ sys.path.insert(0, parent_dir)
 from main import *
 
 def farm_tiles(unlocked_quadrants):
+    """Generate a 10x10 farm according to unlocked quadrants"""
     if "SE" in unlocked_quadrants:
         return [[None] * 10] * 10
     elif "SW" in unlocked_quadrants:
@@ -20,8 +21,27 @@ def farm_tiles(unlocked_quadrants):
         return [[None] * 5 + ["LOCKED"]] * 5 + [["LOCKED"] * 10] * 5
 
 def weed_tile(y, x, unlocked_quadrants=['NW']):
+    """Place a weed at (x, y) coordinates (0 indexed coordinates)"""
     tiles = farm_tiles(unlocked_quadrants)
     tiles[y][x] = {"kind": "WEED"}
+    return tiles
+
+def plant_tile(y, x, crop="WHEAT", plntd_dy=0,
+               watered=False, unwatered=1, units=0,
+               lifespan=-1, fertilized=-1,
+               unlocked_quadrants=['NW']):
+    """Place a plant at (x, y) coordinates (0 indexed coordinates)"""
+    tiles = farm_tiles(unlocked_quadrants)
+    tiles[y][x] = {
+        "kind": "PLANT",
+        "crop": crop,
+        "planted_day": plntd_dy,
+        "watered_today": watered,
+        "consecutive_unwatered": unwatered,
+        "yield_units": units,
+        "max_lifespan_left": lifespan,
+        "fertilized_until_day": fertilized
+    }
     return tiles
 
 def test_possible_actions():
@@ -217,7 +237,24 @@ def test_possible_actions():
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
-    
-    
+
+    # When the farmer is standing on a tile containing a given plant
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
