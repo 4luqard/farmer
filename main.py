@@ -60,13 +60,30 @@ def _tile_unlocked(farm, pos):
     return _quadrant(pos) in unlocked
 
 
-def _base_actions(unlocked, seed):
+def _tile_at(farm, pos):
+    if pos is None:
+        return None
+    x, y = pos
+    tiles = farm.get("tiles")
+    if not tiles or y < 0 or y >= len(tiles):
+        return None
+    row = tiles[y]
+    if x < 0 or x >= len(row):
+        return None
+    return row[x]
+
+
+def _base_actions(unlocked, seed, tile=None):
     actions = ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]
-    if unlocked:
-        actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
-        for crop, count in seed.items():
-            if count > 0:
-                actions.append(["PLANT", crop])
+    if not unlocked:
+        return actions
+    if isinstance(tile, dict) and tile.get("kind") == "WEED":
+        actions.append("DIG")
+        return actions
+    actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
+    for crop, count in seed.items():
+        if count > 0:
+            actions.append(["PLANT", crop])
     return actions
 
 
@@ -81,7 +98,7 @@ def _possible_actions(obs) -> dict:
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
 
-    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed)
+    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos))
 
     market = [
         "HIRE", "BUY_LAND",
@@ -105,7 +122,7 @@ def _possible_actions(obs) -> dict:
     hand_lists = []
     for i in range(hires_today):
         hand_pos = hand_positions[i] if i < len(hand_positions) else None
-        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed)
+        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, _tile_at(farm, hand_pos))
         if shed_adjacent:
             for item, count in shed.items():
                 for n in range(1, count + 1):

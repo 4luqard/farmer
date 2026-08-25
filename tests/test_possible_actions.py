@@ -9,6 +9,21 @@ sys.path.insert(0, parent_dir)
 
 from main import *
 
+def farm_tiles(unlocked_quadrants):
+    if "SE" in unlocked_quadrants:
+        return [[None] * 10] * 10
+    elif "SW" in unlocked_quadrants:
+        return [[None] * 10] * 5 + [[None] * 5 + ["LOCKED"] * 5] * 5
+    elif "NE" in unlocked_quadrants:
+        return [[None] * 10] * 5 + [["LOCKED"] * 10] * 5
+    else:
+        return [[None] * 5 + ["LOCKED"]] * 5 + [["LOCKED"] * 10] * 5
+
+def weed_tile(y, x, unlocked_quadrants=['NW']):
+    tiles = farm_tiles(unlocked_quadrants)
+    tiles[y][x] = {"kind": "WEED"}
+    return tiles
+
 def test_possible_actions():
     # What actions the farmer can take in the first step
     assert _possible_actions({"step": 0}) == {
@@ -185,6 +200,24 @@ def test_possible_actions():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
+    # When the farmer is standing on a tile containing weed
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": weed_tile(2, 3, ['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": weed_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }
+    
     
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
