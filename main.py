@@ -73,7 +73,8 @@ def _tile_at(farm, pos):
     return row[x]
 
 
-def _base_actions(unlocked, seed, tile=None):
+def _base_actions(unlocked, seed, tile=None, carried=None):
+    carried = carried or {}
     actions = ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]
     if not unlocked:
         return actions
@@ -82,6 +83,8 @@ def _base_actions(unlocked, seed, tile=None):
         return actions
     if isinstance(tile, dict) and tile.get("kind") == "PLANT":
         actions.extend(["WATER", "DIG"])
+        if carried.get("FERTILIZER", 0) > 0:
+            actions.append("FERTILIZE")
         return actions
     actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
     for crop, count in seed.items():
@@ -100,8 +103,10 @@ def _possible_actions(obs) -> dict:
 
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
+    carried = obs.get("private", {}).get("inventory", [])
 
-    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos))
+    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos),
+                            carried[0] if carried else None)
 
     market = [
         "HIRE", "BUY_LAND",
@@ -112,7 +117,6 @@ def _possible_actions(obs) -> dict:
 
     shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
     shed = obs.get("private", {}).get("shed", {})
-    carried = obs.get("private", {}).get("inventory", [])
 
     if shed_adjacent:
         for item, count in shed.items():
@@ -125,7 +129,8 @@ def _possible_actions(obs) -> dict:
     hand_lists = []
     for i in range(hires_today):
         hand_pos = hand_positions[i] if i < len(hand_positions) else None
-        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, _tile_at(farm, hand_pos))
+        hand_carried = carried[i + 1] if len(carried) > i + 1 else None
+        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, _tile_at(farm, hand_pos), hand_carried)
         if shed_adjacent:
             for item, count in shed.items():
                 for n in range(1, count + 1):
