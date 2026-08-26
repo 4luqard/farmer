@@ -297,6 +297,25 @@ def test_farmer_on_plant_tile_with_fertilizer():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
+def test_farmer_on_harvestable_plant_tile():
+    """When the farmer is standing on a tile containing a given harvestable plant"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3, units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
