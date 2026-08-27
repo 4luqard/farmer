@@ -43,6 +43,25 @@ def plant_tile(y, x, crop="WHEAT", plntd_dy=0,
     }
     return tiles
 
+def animal_tile(y, x, kind="COOP", animal=None, plcd_dy=0,
+               fed=False, unfed=0, units=0,
+               cared=False, fertilizer=False, bonus=0,
+               unlocked_quadrants=['NW']):
+    """Place a COOP/PASTURE at (x, y) coordinates (0 indexed coordinates)"""
+    tiles = farm_tiles(unlocked_quadrants)
+    tiles[y][x] = {
+        "kind": kind,
+        "animal": animal,
+        "placed_day": plcd_dy,
+        "yield_units": units,
+        "fed_today": fed,
+        "consecutive_unfed": unfed,
+        "cared_today": cared,
+        "fertilizer_available": fertilizer,
+        "pending_care_bonus": bonus
+    }
+    return tiles
+
 def test_first_step():
     """What actions the farmer can take in the first step"""
     assert _possible_actions({"step": 0}) == {
@@ -297,6 +316,7 @@ def test_farmer_on_plant_tile_with_fertilizer():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
+    
 def test_farmer_on_harvestable_plant_tile():
     """When the farmer is standing on a tile containing a given harvestable plant"""
     assert _possible_actions({
@@ -335,6 +355,7 @@ def test_farmer_on_watered_plant_tile():
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
     }
 
+    
 def test_farmer_on_fertilized_plant_tile():
     """When the farmer is standing on a tile containing a fertilized plant"""
     assert _possible_actions({
@@ -355,5 +376,125 @@ def test_farmer_on_fertilized_plant_tile():
     }
 
 
+def test_farmer_on_a_coop_tile():
+    """When the farmer is standing on a tile containing a coop"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"COW": 1}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_farmer_on_a_coop_tile_with_a_goose():
+    """When the farmer is standing on a tile containing a coop with a goose"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"GOOSE": 1}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "GOOSE", 1]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
+    """When the farmer is standing on a tile containing a animal with wheat"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"WHEAT": 10}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_farmer_on_a_coop_tile_with_a_goose_egg():
+    """When the farmer is standing on a tile containing a goose tile with harvestable egg"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"WHEAT": 10}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED", "HARVEST"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_farmer_on_a_pasture_tile():
+    """When the farmer is standing on a tile containing a pasture"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, kind="PASTURE"), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"COW": 10}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "COW", 1]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_farmer_on_a_pasture_tile_with_fertilizer():
+    """When the farmer is standing on a tile containing animal with fertilizer"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventory": [{"COW": 10}, {}], "seed": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "COLLECT_FERTILIZER"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+  
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

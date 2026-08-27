@@ -36,6 +36,8 @@ def _opponent_tracker(obs) -> dict:
 # ---- Possible actions ----
 
 _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
+_ANIMALS = {"GOOSE", "COW", "SHEEP"}
+_STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 
 
 def _apply_carried_inventory(actions, items):
@@ -91,6 +93,22 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
             actions.append("FERTILIZE")
         if tile.get("yield_units", 0) > 0 or watered or fertilized:
             actions.append("HARVEST")
+        return actions
+    if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS:
+        actions.append("DIG")
+        if tile.get("animal") is None:
+            for animal in _STRUCTURE_ANIMALS[tile["kind"]]:
+                if carried.get(animal, 0) > 0:
+                    actions.append(["PLACE", animal, 1])
+        else:
+            if not tile.get("cared_today", False):
+                actions.append("CARE")
+            if not tile.get("fed_today", False) and carried.get("WHEAT", 0) > 0:
+                actions.append("FEED")
+            if tile.get("fertilizer_available", False):
+                actions.append("COLLECT_FERTILIZER")
+            if tile.get("yield_units", 0) > 0:
+                actions.append("HARVEST")
         return actions
     actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
     for crop, count in seed.items():
