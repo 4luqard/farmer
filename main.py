@@ -82,10 +82,14 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
         actions.append("DIG")
         return actions
     if isinstance(tile, dict) and tile.get("kind") == "PLANT":
-        actions.extend(["WATER", "DIG"])
-        if carried.get("FERTILIZER", 0) > 0:
+        watered = tile.get("watered_today", False)
+        fertilized = tile.get("fertilized_until_day", -1) >= 0
+        if not watered:
+            actions.append("WATER")
+        actions.append("DIG")
+        if carried.get("FERTILIZER", 0) > 0 and not fertilized:
             actions.append("FERTILIZE")
-        if tile.get("yield_units", 0) > 0:
+        if tile.get("yield_units", 0) > 0 or watered or fertilized:
             actions.append("HARVEST")
         return actions
     actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
