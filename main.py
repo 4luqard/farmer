@@ -118,7 +118,7 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
 
 
 def _possible_actions(obs) -> dict:
-    seed = obs.get("private", {}).get("seed", {})
+    seed = obs.get("private", {}).get("seeds", {})
 
     farms = obs.get("farms", [])
     player = obs.get("player", 0)
@@ -127,7 +127,7 @@ def _possible_actions(obs) -> dict:
 
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
-    carried = obs.get("private", {}).get("inventory", [])
+    carried = obs.get("private", {}).get("inventories", [])
 
     farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos),
                             carried[0] if carried else None)

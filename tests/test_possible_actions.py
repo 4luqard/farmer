@@ -80,7 +80,7 @@ def test_seed_enables_plant_action():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0}, {"hires_today": 1}],
-        "private": {"seed": {"WHEAT": 1}}
+        "private": {"seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
@@ -97,7 +97,7 @@ def test_hired_hand_gets_own_actions():
     assert _possible_actions({
         "player": 1,
         "farms": [{"hires_today": 0}, {"hires_today": 1}],
-        "private": {"seed": {"WHEAT": 1}}
+        "private": {"seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
@@ -115,7 +115,7 @@ def test_product_in_shed():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"shed": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
+        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -136,7 +136,7 @@ def test_product_in_farmer_inventory():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"inventory": [{"WHEAT": 1}], "seed": {"WHEAT": 1}}
+        "private": {"inventories": [{"WHEAT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -154,7 +154,7 @@ def test_product_in_farmer_and_hand_inventory():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]]}, {"hires_today": 1}],
-        "private": {"inventory": [{"WHEAT": 1}, {"CARROT": 1}], "seed": {"WHEAT": 1}}
+        "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -174,7 +174,7 @@ def test_unit_in_locked_area():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]], "unlocked_quadrants": ["NW"]}, {"hires_today": 1}],
-        "private": {"inventory": [{"WHEAT": 1}, {"CARROT": 1}], "seed": {"WHEAT": 1}}
+        "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -193,7 +193,7 @@ def test_multiple_hires():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"shed": {"WHEAT": 1}, "seed": {"WHEAT": 1}}
+        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -217,7 +217,7 @@ def test_multiple_item_counts():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"shed": {"WHEAT": 3}, "seed": {"WHEAT": 1}}
+        "private": {"shed": {"WHEAT": 3}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -241,7 +241,7 @@ def test_hands_in_different_squares():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 2, "farmer": [4, 4], "hands": [[5, 4], [4, 5]], "unlocked_quadrants": ["NW", "NE"]}, {"hires_today": 1}],
-        "private": {"inventory": [{"WHEAT": 1}, {"CARROT": 1}, {}], "seed": {"WHEAT": 1}}
+        "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}, {}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -265,7 +265,7 @@ def test_farmer_on_weed_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": weed_tile(2, 3, ['NW']), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": weed_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seed": {"CARROT": 2}}
+        "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -285,7 +285,7 @@ def test_farmer_on_plant_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seed": {"CARROT": 2}}
+        "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -305,7 +305,7 @@ def test_farmer_on_plant_tile_with_fertilizer():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"FERTILIZER": 1}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "FERTILIZE"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -325,7 +325,7 @@ def test_farmer_on_harvestable_plant_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3, units=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seed": {"CARROT": 2}}
+        "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -344,7 +344,7 @@ def test_farmer_on_watered_plant_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3, watered=True), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seed": {"CARROT": 2}}
+        "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -364,7 +364,7 @@ def test_farmer_on_fertilized_plant_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": plant_tile(2, 3, fertilized=3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"FERTILIZER": 1}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -381,7 +381,7 @@ def test_animal_in_shed():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"shed": {"GOOSE": 1}, "seed": {"WHEAT": 1}}
+        "private": {"shed": {"GOOSE": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -404,7 +404,7 @@ def test_farmer_on_a_coop_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"COW": 1}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"COW": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -424,7 +424,7 @@ def test_farmer_on_a_coop_tile_with_a_goose():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"GOOSE": 1}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "GOOSE", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -444,7 +444,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"WHEAT": 10}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -464,7 +464,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_egg():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, units=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"WHEAT": 10}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -484,7 +484,7 @@ def test_farmer_on_a_pasture_tile():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, kind="PASTURE"), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"COW": 10}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "COW", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
@@ -504,7 +504,7 @@ def test_farmer_on_a_pasture_tile_with_fertilizer():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"inventory": [{"COW": 10}, {}], "seed": {"CARROT": 2}}
+        "private": {"inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "COLLECT_FERTILIZER"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
