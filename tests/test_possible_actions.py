@@ -149,6 +149,25 @@ def test_sell_in_any_tile():
     }
 
 
+def test_movement_in_edge_tiles():
+    """When the farmer/hand is standing on one of the edges of the farm"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 3, "farmer": [5, 0], "hands": [[9, 1], [8, 9], [0, 8]], "unlocked_quadrants": ['NW']}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "SOUTH", "EAST", "WEST"],
+        "hands": [["PASS", "NORTH", "SOUTH", "WEST"],
+                  ["PASS", "NORTH", "EAST", "WEST"],
+                  ["PASS", "NORTH", "SOUTH", "EAST"]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1]]
+    }
+
+
 def test_product_in_farmer_inventory():
     """When there is a product in the inventory of a farmer"""
     assert _possible_actions({

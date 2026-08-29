@@ -36,6 +36,7 @@ def _opponent_tracker(obs) -> dict:
 # ---- Possible actions ----
 
 _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
+_BOARD_SIZE = 10
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 
@@ -75,9 +76,25 @@ def _tile_at(farm, pos):
     return row[x]
 
 
-def _base_actions(unlocked, seed, tile=None, carried=None):
-    carried = carried or {}
+def _movement_actions(pos):
     actions = ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]
+    if pos is None:
+        return actions
+    x, y = pos
+    if y == 0:
+        actions.remove("NORTH")
+    if y == _BOARD_SIZE - 1:
+        actions.remove("SOUTH")
+    if x == 0:
+        actions.remove("WEST")
+    if x == _BOARD_SIZE - 1:
+        actions.remove("EAST")
+    return actions
+
+
+def _base_actions(unlocked, seed, pos=None, tile=None, carried=None):
+    carried = carried or {}
+    actions = _movement_actions(pos)
     if not unlocked:
         return actions
     if isinstance(tile, dict) and tile.get("kind") == "WEED":
@@ -130,8 +147,8 @@ def _possible_actions(obs) -> dict:
     carried = obs.get("private", {}).get("inventories", [])
     shed = obs.get("private", {}).get("shed", {})
 
-    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos),
-                            carried[0] if carried else None)
+    farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, farmer_pos,
+                            _tile_at(farm, farmer_pos), carried[0] if carried else None)
 
     market = [
         "HIRE", "BUY_LAND",
@@ -156,7 +173,8 @@ def _possible_actions(obs) -> dict:
     for i in range(hires_today):
         hand_pos = hand_positions[i] if i < len(hand_positions) else None
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
-        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, _tile_at(farm, hand_pos), hand_carried)
+        hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
+                             _tile_at(farm, hand_pos), hand_carried)
         if shed_adjacent:
             for item, count in shed.items():
                 for n in range(1, count + 1):
