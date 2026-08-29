@@ -346,7 +346,7 @@ def test_farmer_on_watered_plant_tile():
         ],
         "private": {"seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "HARVEST"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
@@ -366,7 +366,7 @@ def test_farmer_on_fertilized_plant_tile():
         ],
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",

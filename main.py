@@ -91,7 +91,7 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
         actions.append("DIG")
         if carried.get("FERTILIZER", 0) > 0 and not fertilized:
             actions.append("FERTILIZE")
-        if tile.get("yield_units", 0) > 0 or watered or fertilized:
+        if tile.get("yield_units", 0) > 0:
             actions.append("HARVEST")
         return actions
     if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS:
