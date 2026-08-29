@@ -110,7 +110,7 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
             if tile.get("yield_units", 0) > 0:
                 actions.append("HARVEST")
         return actions
-    actions.extend(["WATER", "BUILD_COOP", "BUILD_PASTURE"])
+    actions.extend(["BUILD_COOP", "BUILD_PASTURE"])
     for crop, count in seed.items():
         if count > 0:
             actions.append(["PLANT", crop])

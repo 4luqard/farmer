@@ -66,7 +66,7 @@ def test_first_step():
     """What actions the farmer can take in the first step"""
     assert _possible_actions({"step": 0}) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE"],
+                   "BUILD_COOP", "BUILD_PASTURE"],
         "hands": [],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -83,7 +83,7 @@ def test_seed_enables_plant_action():
         "private": {"seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -100,9 +100,9 @@ def test_hired_hand_gets_own_actions():
         "private": {"seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]]],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
@@ -118,10 +118,10 @@ def test_product_in_shed():
         "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]],
         "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -139,7 +139,7 @@ def test_product_in_farmer_inventory():
         "private": {"inventories": [{"WHEAT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": [],
         "market": ["HIRE", "BUY_LAND",
@@ -157,10 +157,10 @@ def test_product_in_farmer_and_hand_inventory():
         "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "CARROT", 1], "DROP"],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -177,7 +177,7 @@ def test_unit_in_locked_area():
         "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    ["PLACE", "CARROT", 1], "DROP"],
@@ -196,13 +196,13 @@ def test_multiple_hires():
         "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]],
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -220,13 +220,13 @@ def test_multiple_item_counts():
         "private": {"shed": {"WHEAT": 3}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]],
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -244,10 +244,10 @@ def test_hands_in_different_squares():
         "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}, {}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                  "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                  "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "CARROT", 1], "DROP"],
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]],
         "market": ["HIRE", "BUY_LAND",
@@ -268,7 +268,7 @@ def test_farmer_on_weed_tile():
         "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -288,7 +288,7 @@ def test_farmer_on_plant_tile():
         "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -308,7 +308,7 @@ def test_farmer_on_plant_tile_with_fertilizer():
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "FERTILIZE"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -328,7 +328,7 @@ def test_farmer_on_harvestable_plant_tile():
         "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -347,7 +347,7 @@ def test_farmer_on_watered_plant_tile():
         "private": {"seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -367,7 +367,7 @@ def test_farmer_on_fertilized_plant_tile():
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -384,10 +384,10 @@ def test_animal_in_shed():
         "private": {"shed": {"GOOSE": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "GOOSE", 1]],
         "hands": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
-                   "WATER", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "GOOSE", 1]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -407,7 +407,7 @@ def test_farmer_on_a_coop_tile():
         "private": {"inventories": [{"COW": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -427,7 +427,7 @@ def test_farmer_on_a_coop_tile_with_a_goose():
         "private": {"inventories": [{"GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "GOOSE", 1]],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -447,7 +447,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
         "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -467,7 +467,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_egg():
         "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED", "HARVEST"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -487,7 +487,7 @@ def test_farmer_on_a_pasture_tile():
         "private": {"inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "COW", 1]],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
@@ -507,7 +507,7 @@ def test_farmer_on_a_pasture_tile_with_fertilizer():
         "private": {"inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
-        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
