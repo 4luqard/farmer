@@ -114,7 +114,7 @@ def test_product_in_shed():
     """When there is a product in the shed"""
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
+        "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]], "unlocked_quadrants": ['NE', 'NW']}, {"hires_today": 1}],
         "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
@@ -123,6 +123,26 @@ def test_product_in_shed():
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]]],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1]]
+    }
+
+
+def test_shed_access():
+    """When hands cannot acces the shed"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[2, 3]], "unlocked_quadrants": ['NE', 'NW']}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
+                   ["PICKUP", "WHEAT", 1]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]]],
         "market": ["HIRE", "BUY_LAND",
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
@@ -247,7 +267,7 @@ def test_multiple_hires():
     """When there are more than 1 hires"""
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
+        "farms": [{"hires_today": 2, "farmer": [4, 4], "hands": [[5, 4], [4, 5]], "unlocked_quadrants": ['NW', 'NE', 'SW']}, {"hires_today": 1}],
         "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",

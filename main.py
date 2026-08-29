@@ -64,6 +64,10 @@ def _tile_unlocked(farm, pos):
     return _quadrant(pos) in unlocked
 
 
+def _shed_adjacent(pos):
+    return pos is None or tuple(pos) in _SHED_ADJACENT
+
+
 def _tile_at(farm, pos):
     if pos is None:
         return None
@@ -163,9 +167,7 @@ def _possible_actions(obs) -> dict:
         if item not in _ANIMALS:
             market.append(["SELL", item, 1])
 
-    shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
-
-    if shed_adjacent:
+    if _shed_adjacent(farmer_pos):
         for item, count in shed.items():
             for n in range(1, count + 1):
                 farmer.append(["PICKUP", item, n])
@@ -178,7 +180,7 @@ def _possible_actions(obs) -> dict:
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
         hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
                              _tile_at(farm, hand_pos), hand_carried)
-        if shed_adjacent:
+        if _shed_adjacent(hand_pos):
             for item, count in shed.items():
                 for n in range(1, count + 1):
                     hand.append(["PICKUP", item, n])
