@@ -625,6 +625,30 @@ def test_when_farmer_doesnt_have_money():
         "market": [["SELL", "WHEAT", 1]]
     }   
 
+
+def test_when_farmer_have_some_money():
+    """When the farmer have some money to buy certain things"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"money": 70, "hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": {
+            "prices": _market_prices()
+        },
+        "private": {"shed": {"WHEAT": 1}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"],
+                   ["BUY_PRODUCT", "WHEAT"],
+                   ["SELL", "WHEAT", 1]]
+
+    }   
+
   
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

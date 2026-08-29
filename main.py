@@ -40,6 +40,21 @@ _BOARD_SIZE = 10
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
+_SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
+_ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
+_LAND_COSTS = [1000, 2000, 4000]
+
+
+def _hire_cost(hires_today):
+    a, b = 1, 1
+    for _ in range(hires_today):
+        a, b = b, a + b
+    return a
+
+
+def _land_cost(unlocked):
+    n = len(set(unlocked))
+    return _LAND_COSTS[n - 1] if 1 <= n <= len(_LAND_COSTS) else None
 
 
 def _apply_carried_inventory(actions, items):
@@ -155,15 +170,22 @@ def _possible_actions(obs) -> dict:
                             _tile_at(farm, farmer_pos), carried[0] if carried else None)
 
     money = farm.get("money")
+    prices = obs.get("market", {}).get("prices", {})
+    unlocked = farm.get("unlocked_quadrants") or ()
     market = []
     if money is None or money > 0:
-        market += [
-            "HIRE", "BUY_LAND",
-            ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-            ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-            ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+        priced = [
+            ("HIRE", _hire_cost(farm.get("hires_today", 0))),
+            ("BUY_LAND", _land_cost(unlocked)),
         ]
-        if set(farm.get("unlocked_quadrants") or ()) >= _ALL_QUADRANTS:
+        priced += [(["BUY_SEED", c], cost) for c, cost in _SEED_COSTS.items()]
+        priced += [(["BUY_PRODUCT", p], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
+        priced += [(["BUY_ANIMAL", a], cost) for a, cost in _ANIMAL_COSTS.items()]
+        market = [
+            action for action, cost in priced
+            if money is None or (cost is not None and cost <= money)
+        ]
+        if set(unlocked) >= _ALL_QUADRANTS and "BUY_LAND" in market:
             market.remove("BUY_LAND")
     for item in shed:
         if item not in _ANIMALS:
