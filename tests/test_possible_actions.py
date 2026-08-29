@@ -131,6 +131,24 @@ def test_product_in_shed():
     }
 
 
+def test_sell_in_any_tile():
+    """When there is a product in the shed and the farmer is not next to the shed"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 0, "farmer": [3, 3]}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
+        "hands": [],
+        "market": ["HIRE", "BUY_LAND",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1]]
+    }
+
+
 def test_product_in_farmer_inventory():
     """When there is a product in the inventory of a farmer"""
     assert _possible_actions({

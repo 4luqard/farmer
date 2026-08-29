@@ -128,6 +128,7 @@ def _possible_actions(obs) -> dict:
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
     carried = obs.get("private", {}).get("inventories", [])
+    shed = obs.get("private", {}).get("shed", {})
 
     farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, _tile_at(farm, farmer_pos),
                             carried[0] if carried else None)
@@ -138,16 +139,16 @@ def _possible_actions(obs) -> dict:
         ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
         ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
     ]
+    for item in shed:
+        if item not in _ANIMALS:
+            market.append(["SELL", item, 1])
 
     shed_adjacent = tuple(farm.get("farmer", [])) in _SHED_ADJACENT
-    shed = obs.get("private", {}).get("shed", {})
 
     if shed_adjacent:
         for item, count in shed.items():
             for n in range(1, count + 1):
                 farmer.append(["PICKUP", item, n])
-            if item not in _ANIMALS:
-                market.append(["SELL", item, 1])
         if carried:
             _apply_carried_inventory(farmer, carried[0])
 
