@@ -96,7 +96,7 @@ def test_hired_hand_gets_own_actions():
     """When there is a hired hand"""
     assert _possible_actions({
         "player": 1,
-        "farms": [{"hires_today": 0}, {"hires_today": 1}],
+        "farms": [{"hires_today": 0}, {"hands": [[]]}],
         "private": {"seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
@@ -173,7 +173,7 @@ def test_movement_in_edge_tiles():
     """When the farmer/hand is standing on one of the edges of the farm"""
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 3, "farmer": [5, 0], "hands": [[9, 1], [8, 9], [0, 8]], "unlocked_quadrants": ['NW']}, {"hires_today": 1}],
+        "farms": [{"farmer": [5, 0], "hands": [[9, 1], [8, 9], [0, 8]], "unlocked_quadrants": ['NW']}, {"hires_today": 1}],
         "private": {"shed": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "SOUTH", "EAST", "WEST"],
@@ -291,7 +291,7 @@ def test_multiple_item_counts():
     """When there are more than one item"""
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 2, "farmer": [4, 4]}, {"hires_today": 1}],
+        "farms": [{"hires_today": 2, "farmer": [4, 4], "hands": [[4,4], [4,4]]}, {"hires_today": 1}],
         "private": {"shed": {"WHEAT": 3}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
@@ -455,7 +455,7 @@ def test_animal_in_shed():
     """When there is an animal in the shed"""
     assert _possible_actions({
         "player": 0,
-        "farms": [{"hires_today": 1, "farmer": [4, 4]}, {"hires_today": 1}],
+        "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[4, 4]]}, {"hires_today": 1}],
         "private": {"shed": {"GOOSE": 1}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",

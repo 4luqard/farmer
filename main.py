@@ -145,7 +145,6 @@ def _possible_actions(obs) -> dict:
     farms = obs.get("farms", [])
     player = obs.get("player", 0)
     farm = farms[player] if player < len(farms) else {}
-    hires_today = farm.get("hires_today", 0)
 
     farmer_pos = farm.get("farmer")
     hand_positions = farm.get("hands", [])
@@ -175,8 +174,8 @@ def _possible_actions(obs) -> dict:
             _apply_carried_inventory(farmer, carried[0])
 
     hand_lists = []
-    for i in range(hires_today):
-        hand_pos = hand_positions[i] if i < len(hand_positions) else None
+    for i, hand_pos in enumerate(hand_positions):
+        hand_pos = hand_pos or None
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
         hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
                              _tile_at(farm, hand_pos), hand_carried)
