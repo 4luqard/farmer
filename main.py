@@ -95,8 +95,8 @@ def _base_actions(unlocked, seed, tile=None, carried=None):
             actions.append("HARVEST")
         return actions
     if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS:
-        actions.append("DIG")
         if tile.get("animal") is None:
+            actions.append("DIG")
             for animal in _STRUCTURE_ANIMALS[tile["kind"]]:
                 if carried.get(animal, 0) > 0:
                     actions.append(["PLACE", animal, 1])

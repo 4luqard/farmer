@@ -446,7 +446,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
         ],
         "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
@@ -466,7 +466,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_egg():
         ],
         "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "FEED", "HARVEST"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
@@ -506,7 +506,7 @@ def test_farmer_on_a_pasture_tile_with_fertilizer():
         ],
         "private": {"inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", "CARE", "COLLECT_FERTILIZER"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", "BUY_LAND",
