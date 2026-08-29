@@ -39,6 +39,7 @@ _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
 _BOARD_SIZE = 10
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
+_ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 
 
 def _apply_carried_inventory(actions, items):
@@ -156,6 +157,8 @@ def _possible_actions(obs) -> dict:
         ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
         ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
     ]
+    if set(farm.get("unlocked_quadrants") or ()) >= _ALL_QUADRANTS:
+        market.remove("BUY_LAND")
     for item in shed:
         if item not in _ANIMALS:
             market.append(["SELL", item, 1])

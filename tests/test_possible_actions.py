@@ -168,6 +168,24 @@ def test_movement_in_edge_tiles():
     }
 
 
+def test_all_quadrants_unlocked():
+    """When all the quadrants are unlocked"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [{"hires_today": 0, "farmer": [3, 3], "unlocked_quadrants": ['NW', 'NE', 'SW', 'SE']}, {"hires_today": 1}],
+        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
+        "hands": [],
+        "market": ["HIRE",
+                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+                   ["SELL", "WHEAT", 1]]
+    }
+
+
 def test_product_in_farmer_inventory():
     """When there is a product in the inventory of a farmer"""
     assert _possible_actions({
