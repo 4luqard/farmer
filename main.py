@@ -146,8 +146,8 @@ def _possible_actions(obs) -> dict:
         for item, count in shed.items():
             for n in range(1, count + 1):
                 farmer.append(["PICKUP", item, n])
-                if item not in _ANIMALS:
-                    market.append(["SELL", item, n])
+            if item not in _ANIMALS:
+                market.append(["SELL", item, 1])
         if carried:
             _apply_carried_inventory(farmer, carried[0])
 
