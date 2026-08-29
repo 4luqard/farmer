@@ -154,14 +154,17 @@ def _possible_actions(obs) -> dict:
     farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, farmer_pos,
                             _tile_at(farm, farmer_pos), carried[0] if carried else None)
 
-    market = [
-        "HIRE", "BUY_LAND",
-        ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-        ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-        ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-    ]
-    if set(farm.get("unlocked_quadrants") or ()) >= _ALL_QUADRANTS:
-        market.remove("BUY_LAND")
+    money = farm.get("money")
+    market = []
+    if money is None or money > 0:
+        market += [
+            "HIRE", "BUY_LAND",
+            ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
+            ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
+            ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
+        ]
+        if set(farm.get("unlocked_quadrants") or ()) >= _ALL_QUADRANTS:
+            market.remove("BUY_LAND")
     for item in shed:
         if item not in _ANIMALS:
             market.append(["SELL", item, 1])

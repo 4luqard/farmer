@@ -62,6 +62,21 @@ def _animal_tile(y, x, kind="COOP", animal=None, plcd_dy=0,
     }
     return tiles
 
+def _market_prices():
+    """Prices of each thing in the market"""
+    return {
+        "WHEAT": 25,
+        "CARROT": 35,
+        "TOMATO": 60,
+        "STRAWBERRY": 120,
+        "MELON": 250,
+        "EGG": 50,
+        "MILK": 160,
+        "WOOL": 200,
+        "FERTILIZER": 100
+    }
+
+
 def test_first_step():
     """What actions the farmer can take in the first step"""
     assert _possible_actions({"step": 0}) == {
@@ -588,6 +603,26 @@ def test_farmer_on_a_pasture_tile_with_fertilizer():
                    ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
                    ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
                    ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+    }   
+
+
+def test_when_farmer_doesnt_have_money():
+    """When the farmer doesn't have any money to buy anything"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"money": 0, "hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": {
+            "prices": _market_prices()
+        },
+        "private": {"shed": {"WHEAT": 1}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": [["SELL", "WHEAT", 1]]
     }   
 
   
