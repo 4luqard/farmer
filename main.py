@@ -42,6 +42,7 @@ _UNSELLABLE = _ANIMALS | {"FERTILIZER"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
+_FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _LAND_COSTS = [1000, 2000, 4000]
 
@@ -113,7 +114,7 @@ def _movement_actions(pos):
     return actions
 
 
-def _base_actions(unlocked, seed, pos=None, tile=None, carried=None):
+def _base_actions(unlocked, seed, pos=None, tile=None, carried=None, day=0):
     carried = carried or {}
     actions = _movement_actions(pos)
     if not unlocked:
@@ -123,13 +124,14 @@ def _base_actions(unlocked, seed, pos=None, tile=None, carried=None):
         return actions
     if isinstance(tile, dict) and tile.get("kind") == "PLANT":
         watered = tile.get("watered_today", False)
-        fertilized = tile.get("fertilized_until_day", -1) >= 0
+        fertilized = tile.get("fertilized_until_day", -1) >= day
         if not watered:
             actions.append("WATER")
         actions.append("DIG")
         if carried.get("FERTILIZER", 0) > 0 and not fertilized:
             actions.append("FERTILIZE")
-        if tile.get("yield_units", 0) > 0:
+        age = day - tile.get("planted_day", 0)
+        if tile.get("yield_units", 0) > 0 and age >= _FIRST_YIELD_DAY.get(tile.get("crop"), 0):
             actions.append("HARVEST")
         return actions
     if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS:
@@ -166,9 +168,10 @@ def _possible_actions(obs) -> dict:
     hand_positions = farm.get("hands", [])
     carried = obs.get("private", {}).get("inventories", [])
     shed = obs.get("private", {}).get("shed", {})
+    day = obs.get("day", 0)
 
     farmer = _base_actions(_tile_unlocked(farm, farmer_pos), seed, farmer_pos,
-                            _tile_at(farm, farmer_pos), carried[0] if carried else None)
+                            _tile_at(farm, farmer_pos), carried[0] if carried else None, day)
 
     money = farm.get("money")
     prices = obs.get("market", {}).get("prices", {})
@@ -205,7 +208,7 @@ def _possible_actions(obs) -> dict:
         hand_pos = hand_pos or None
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
         hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
-                             _tile_at(farm, hand_pos), hand_carried)
+                             _tile_at(farm, hand_pos), hand_carried, day)
         if _shed_adjacent(hand_pos):
             for item, count in shed.items():
                 for n in range(1, count + 1):

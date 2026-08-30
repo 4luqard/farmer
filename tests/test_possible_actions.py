@@ -346,8 +346,9 @@ def test_farmer_on_plant_tile_with_fertilizer():
     """When the farmer is standing on a tile containing a given plant and has fertilizer"""
     assert _possible_actions({
         "player": 0,
+        "day": 4,
         "farms": [
-            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, fertilized=3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
@@ -363,8 +364,9 @@ def test_farmer_on_harvestable_plant_tile():
     """When the farmer is standing on a tile containing a given harvestable plant"""
     assert _possible_actions({
         "player": 0,
+        "day": 5,
         "farms": [
-            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=1), "unlocked_quadrants": ['NW']},
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, plntd_dy=2, units=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
         "private": {"seeds": {"CARROT": 2}}
@@ -372,12 +374,28 @@ def test_farmer_on_harvestable_plant_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
+    
+def test_farmer_on_harvestable_plant_tile():
+    """When the farmer is standing on a tile containing a given harvestable plant"""
+    assert _possible_actions({
+        "player": 0,
+        "day": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, plntd_dy=2, units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": _market_base_buy_actions()
+    }
+
+    
 def test_farmer_on_watered_plant_tile():
     """When the farmer is standing on a tile containing a watered plant"""
     assert _possible_actions({
@@ -399,6 +417,7 @@ def test_farmer_on_fertilized_plant_tile():
     """When the farmer is standing on a tile containing a fertilized plant"""
     assert _possible_actions({
         "player": 0,
+        "day": 2,
         "farms": [
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, fertilized=3), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
