@@ -38,6 +38,7 @@ def _opponent_tracker(obs) -> dict:
 _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
 _BOARD_SIZE = 10
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
+_UNSELLABLE = _ANIMALS | {"FERTILIZER"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
@@ -178,18 +179,19 @@ def _possible_actions(obs) -> dict:
             ("HIRE", _hire_cost(farm.get("hires_today", 0))),
             ("BUY_LAND", _land_cost(unlocked)),
         ]
-        priced += [(["BUY_SEED", c], cost) for c, cost in _SEED_COSTS.items()]
-        priced += [(["BUY_PRODUCT", p], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
-        priced += [(["BUY_ANIMAL", a], cost) for a, cost in _ANIMAL_COSTS.items()]
+        priced += [(["BUY_SEED", c, 1], cost) for c, cost in _SEED_COSTS.items()]
+        priced += [(["BUY_PRODUCT", p, 1], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
+        priced += [(["BUY_ANIMAL", a, 1], cost) for a, cost in _ANIMAL_COSTS.items()]
         market = [
             action for action, cost in priced
             if money is None or (cost is not None and cost <= money)
         ]
         if set(unlocked) >= _ALL_QUADRANTS and "BUY_LAND" in market:
             market.remove("BUY_LAND")
-    for item in shed:
-        if item not in _ANIMALS:
-            market.append(["SELL", item, 1])
+    for item, count in shed.items():
+        if item not in _UNSELLABLE:
+            for n in range(1, count + 1):
+                market.append(["SELL", item, n])
 
     if _shed_adjacent(farmer_pos):
         for item, count in shed.items():

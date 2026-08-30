@@ -76,17 +76,21 @@ def _market_prices():
         "FERTILIZER": 100
     }
 
+def _market_base_buy_actions():
+    return ["HIRE", "BUY_LAND",
+            ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1], ["BUY_SEED", "TOMATO", 1], ["BUY_SEED", "STRAWBERRY", 1], ["BUY_SEED", "MELON", 1],
+            ["BUY_PRODUCT", "WHEAT", 1], ["BUY_PRODUCT", "FERTILIZER", 1],
+            ["BUY_ANIMAL", "GOOSE", 1], ["BUY_ANIMAL", "COW", 1], ["BUY_ANIMAL", "SHEEP", 1]]
+
+
 
 def test_first_step():
     """What actions the farmer can take in the first step"""
-    assert _possible_actions({"step": 0}) == {
+    assert _possible_actions({"day": 0, "hour": 0}) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE"],
         "hands": [],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -100,10 +104,7 @@ def test_seed_enables_plant_action():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -118,10 +119,7 @@ def test_hired_hand_gets_own_actions():
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -130,7 +128,7 @@ def test_product_in_shed():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 1, "farmer": [4, 4], "hands": [[5, 4]], "unlocked_quadrants": ['NE', 'NW']}, {"hires_today": 1}],
-        "private": {"shed": {"WHEAT": 1}, "seeds": {"WHEAT": 1}}
+        "private": {"shed": {"WHEAT": 1, "CARROT": 0}, "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
@@ -138,11 +136,7 @@ def test_product_in_shed():
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -158,11 +152,7 @@ def test_shed_access():
                    ["PICKUP", "WHEAT", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -176,11 +166,7 @@ def test_sell_in_any_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -195,11 +181,7 @@ def test_movement_in_edge_tiles():
         "hands": [["PASS", "NORTH", "SOUTH", "WEST"],
                   ["PASS", "NORTH", "EAST", "WEST"],
                   ["PASS", "NORTH", "SOUTH", "EAST"]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -213,11 +195,7 @@ def test_all_quadrants_unlocked():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"]],
         "hands": [],
-        "market": ["HIRE",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": ((temp := _market_base_buy_actions()).remove("BUY_LAND") or temp) + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -252,10 +230,7 @@ def test_product_in_farmer_and_hand_inventory():
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "CARROT", 1], "DROP"]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -271,10 +246,7 @@ def test_unit_in_locked_area():
                    ["PLACE", "WHEAT", 1], "DROP"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    ["PLACE", "CARROT", 1], "DROP"]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -294,11 +266,7 @@ def test_multiple_hires():
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1]]
     }
 
 
@@ -318,11 +286,7 @@ def test_multiple_item_counts():
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "WHEAT", 1], ["PICKUP", "WHEAT", 2], ["PICKUP", "WHEAT", 3]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"],
-                   ["SELL", "WHEAT", 1]]
+        "market": _market_base_buy_actions() + [["SELL", "WHEAT", 1], ["SELL", "WHEAT", 2], ["SELL", "WHEAT", 3]]
     }
 
 
@@ -340,10 +304,7 @@ def test_hands_in_different_squares():
                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PLACE", "CARROT", 1], "DROP"],
                   ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -360,10 +321,7 @@ def test_farmer_on_weed_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -380,10 +338,7 @@ def test_farmer_on_plant_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -400,10 +355,7 @@ def test_farmer_on_plant_tile_with_fertilizer():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "FERTILIZE"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
     
@@ -439,10 +391,7 @@ def test_farmer_on_watered_plant_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
     
@@ -459,10 +408,7 @@ def test_farmer_on_fertilized_plant_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -479,10 +425,7 @@ def test_animal_in_shed():
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
                    ["PICKUP", "GOOSE", 1]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
@@ -499,10 +442,7 @@ def test_farmer_on_a_coop_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
@@ -519,10 +459,7 @@ def test_farmer_on_a_coop_tile_with_a_goose():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "GOOSE", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
@@ -539,10 +476,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
@@ -559,10 +493,7 @@ def test_farmer_on_a_coop_tile_with_a_goose_egg():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
@@ -579,10 +510,7 @@ def test_farmer_on_a_pasture_tile():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "DIG", ["PLACE", "COW", 1]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
@@ -599,10 +527,7 @@ def test_farmer_on_a_pasture_tile_with_fertilizer():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }   
 
 
