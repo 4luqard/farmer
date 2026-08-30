@@ -63,8 +63,8 @@ def _land_cost(unlocked):
 def _apply_carried_inventory(actions, items):
     dropped = False
     for item, count in items.items():
-        if count > 0:
-            actions.append(["PLACE", item, count])
+        for n in range(1, count + 1):
+            actions.append(["PLACE", item, n])
             dropped = True
     if dropped:
         actions.append("DROP")

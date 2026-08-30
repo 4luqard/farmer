@@ -204,16 +204,13 @@ def test_product_in_farmer_inventory():
     assert _possible_actions({
         "player": 0,
         "farms": [{"hires_today": 0, "farmer": [4, 4]}, {"hires_today": 1}],
-        "private": {"inventories": [{"WHEAT": 1}], "seeds": {"WHEAT": 1}}
+        "private": {"inventories": [{"WHEAT": 3}], "seeds": {"WHEAT": 1}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "WHEAT"],
-                   ["PLACE", "WHEAT", 1], "DROP"],
+                   ["PLACE", "WHEAT", 1], ["PLACE", "WHEAT", 2], ["PLACE", "WHEAT", 3], "DROP"],
         "hands": [],
-        "market": ["HIRE", "BUY_LAND",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"], ["BUY_SEED", "STRAWBERRY"], ["BUY_SEED", "MELON"],
-                   ["BUY_PRODUCT", "WHEAT"], ["BUY_PRODUCT", "FERTILIZER"],
-                   ["BUY_ANIMAL", "GOOSE"], ["BUY_ANIMAL", "COW"], ["BUY_ANIMAL", "SHEEP"]]
+        "market": _market_base_buy_actions()
     }
 
 
