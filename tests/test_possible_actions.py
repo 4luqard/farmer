@@ -611,6 +611,28 @@ def test_when_the_shed_is_full():
                    ["SELL", "FERTILIZER", 2]]
     }   
 
+
+def test_product_affordability():
+    """When the farmer have the amount of money equaling the price of a product (e.g. WHEAT)"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"money": 25, "hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": {
+            "prices": _market_prices()
+        },
+        "private": {"shed": {"WHEAT": 1}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "COLLECT_FERTILIZER"],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE",
+                   ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1],
+                   ["SELL", "WHEAT", 1]]
+    }   
+
   
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

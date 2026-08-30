@@ -45,6 +45,12 @@ _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELO
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _LAND_COSTS = [1000, 2000, 4000]
+_MARKET_I0 = 10000
+_PRICE_FLOOR = 1
+_MARKET_PARAMS = {  # scarcity-side price curve, python-kit/README.md L222-232
+    "WHEAT": {"base": 25, "T": 400, "func": "sqrt", "target": 0.80},
+    "FERTILIZER": {"base": 100, "T": 200, "func": "linear", "target": 0.40},
+}
 
 
 def _hire_cost(hires_today):
@@ -52,6 +58,18 @@ def _hire_cost(hires_today):
     for _ in range(hires_today):
         a, b = b, a + b
     return a
+
+
+def _shape(func, x):
+    x = max(0.0, x)
+    return x ** 0.5 if func == "sqrt" else x  # "linear" + documented fallback
+
+
+def _buy_price(item, inv):
+    """BUY_PRODUCT unit price: the curve at post-buy inventory (python-kit/README.md L202-214)."""
+    p = _MARKET_PARAMS[item]
+    amp = p["target"] * p["base"] / _shape(p["func"], p["T"])
+    return max(_PRICE_FLOOR, int(round(p["base"] + amp * _shape(p["func"], _MARKET_I0 - inv))))
 
 
 def _land_cost(unlocked):
@@ -174,7 +192,7 @@ def _possible_actions(obs) -> dict:
                             _tile_at(farm, farmer_pos), carried[0] if carried else None, day)
 
     money = farm.get("money")
-    prices = obs.get("market", {}).get("prices", {})
+    inventory = obs.get("market", {}).get("inventory", {})
     unlocked = farm.get("unlocked_quadrants") or ()
     shed_full = sum(shed.values()) >= _SHED_CAPACITY
     market = []
@@ -185,7 +203,10 @@ def _possible_actions(obs) -> dict:
         ]
         priced += [(["BUY_SEED", c, 1], cost) for c, cost in _SEED_COSTS.items()]
         if not shed_full:
-            priced += [(["BUY_PRODUCT", p, 1], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
+            priced += [
+                (["BUY_PRODUCT", p, 1], _buy_price(p, inventory.get(p, _MARKET_I0) - 1))
+                for p in ("WHEAT", "FERTILIZER")
+            ]
             priced += [(["BUY_ANIMAL", a, 1], cost) for a, cost in _ANIMAL_COSTS.items()]
         market = [
             action for action, cost in priced
