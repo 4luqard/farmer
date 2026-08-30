@@ -587,7 +587,6 @@ def test_when_farmer_have_some_money():
                    ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1], ["BUY_SEED", "TOMATO", 1],
                    ["BUY_PRODUCT", "WHEAT", 1],
                    ["SELL", "WHEAT", 1]]
-
     }   
 
 
@@ -607,8 +606,9 @@ def test_when_the_shed_is_full():
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE", ["SELL", "FERTILIZER", 1], ["SELL", "FERTILIZER", 2]]
-
+        "market": ["HIRE", ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1],
+                   ["BUY_SEED", "TOMATO", 1], ["SELL", "FERTILIZER", 1],
+                   ["SELL", "FERTILIZER", 2]]
     }   
 
   

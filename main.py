@@ -184,10 +184,9 @@ def _possible_actions(obs) -> dict:
             ("BUY_LAND", _land_cost(unlocked)),
         ]
         priced += [(["BUY_SEED", c, 1], cost) for c, cost in _SEED_COSTS.items()]
-        priced += [(["BUY_PRODUCT", p, 1], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
-        priced += [(["BUY_ANIMAL", a, 1], cost) for a, cost in _ANIMAL_COSTS.items()]
-        if shed_full:
-            priced = priced[:2]
+        if not shed_full:
+            priced += [(["BUY_PRODUCT", p, 1], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
+            priced += [(["BUY_ANIMAL", a, 1], cost) for a, cost in _ANIMAL_COSTS.items()]
         market = [
             action for action, cost in priced
             if money is None or (cost is not None and cost <= money)
