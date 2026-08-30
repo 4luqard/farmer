@@ -87,6 +87,11 @@ def _apply_carried_inventory(actions, items):
         actions.append("DROP")
 
 
+def _shed_pickups(shed):
+    ordered = sorted(shed.items(), key=lambda kv: kv[0] not in _ANIMALS)  # stable: animals first
+    return [["PICKUP", item, n] for item, count in ordered for n in range(1, count + 1)]
+
+
 def _quadrant(pos):
     x, y = pos
     return ("N" if y < 5 else "S") + ("W" if x < 5 else "E")
@@ -219,11 +224,9 @@ def _possible_actions(obs) -> dict:
             for n in range(1, count + 1):
                 market.append(["SELL", item, n])
 
-    if not shed_full and _shed_adjacent(farmer_pos):
-        for item, count in shed.items():
-            for n in range(1, count + 1):
-                farmer.append(["PICKUP", item, n])
-        if carried:
+    if _shed_adjacent(farmer_pos):
+        farmer.extend(_shed_pickups(shed))
+        if not shed_full and carried:
             _apply_carried_inventory(farmer, carried[0])
 
     hand_lists = []
@@ -232,11 +235,9 @@ def _possible_actions(obs) -> dict:
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
         hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
                              _tile_at(farm, hand_pos), hand_carried, day)
-        if not shed_full and _shed_adjacent(hand_pos):
-            for item, count in shed.items():
-                for n in range(1, count + 1):
-                    hand.append(["PICKUP", item, n])
-            if len(carried) > i + 1:
+        if _shed_adjacent(hand_pos):
+            hand.extend(_shed_pickups(shed))
+            if not shed_full and len(carried) > i + 1:
                 _apply_carried_inventory(hand, carried[i + 1])
         hand_lists.append(hand)
 

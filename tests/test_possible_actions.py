@@ -603,7 +603,8 @@ def test_when_the_shed_is_full():
         },
         "private": {"shed": {"SHEEP": 87, "FERTILIZER": 2, "GOOSE": 11}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP", "BUILD_PASTURE",
+                   ["PLANT", "CARROT"]] + [["PICKUP", "SHEEP", i] for i in range(1, 88)] + [["PICKUP", "GOOSE", i] for i in range(1, 12)] + [["PICKUP", "FERTILIZER", i] for i in range(1, 3)],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE", ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1],
@@ -631,6 +632,33 @@ def test_product_affordability():
         "market": ["HIRE",
                    ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1],
                    ["SELL", "WHEAT", 1]]
+    }   
+
+
+def test_when_the_shed_is_full_and_empty_unit_inventory():
+    """
+    When the non-seed item count is 100 (limit) and the unit standing
+    next to the shed has no item in their invetory
+    """
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"money": 70, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": {
+            "prices": _market_prices()
+        },
+        "private": {"shed": {"SHEEP": 87, "FERTILIZER": 2, "GOOSE": 11}, "inventories": [{}, {}], "seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP",
+                   "BUILD_PASTURE",
+                   ["PLANT", "CARROT"]] + [["PICKUP", "SHEEP", i] for i in range(1, 88)] + [["PICKUP", "GOOSE", i] for i in range(1, 12)] + [["PICKUP", "FERTILIZER", i] for i in range(1, 3)],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE", ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1],
+                   ["BUY_SEED", "TOMATO", 1], ["SELL", "FERTILIZER", 1],
+                   ["SELL", "FERTILIZER", 2]]
     }   
 
   
