@@ -375,7 +375,7 @@ def test_farmer_on_harvestable_plant_tile():
     }
 
     
-def test_farmer_on_harvestable_plant_tile():
+def test_farmer_on_non_harvestable_plant_tile():
     """When the farmer is standing on a tile containing a given harvestable plant"""
     assert _possible_actions({
         "player": 0,
@@ -602,12 +602,12 @@ def test_when_the_shed_is_full():
         "market": {
             "prices": _market_prices()
         },
-        "private": {"shed": {"SHEEP": 38, "FERTILIZER": 47, "GOOSE": 15}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
+        "private": {"shed": {"SHEEP": 87, "FERTILIZER": 2, "GOOSE": 11}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
         "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
-        "market": ["HIRE"]
+        "market": ["HIRE", ["SELL", "FERTILIZER", 1], ["SELL", "FERTILIZER", 2]]
 
     }   
 

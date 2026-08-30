@@ -39,7 +39,6 @@ _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
 _BOARD_SIZE = 10
 _SHED_CAPACITY = 100
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
-_UNSELLABLE = _ANIMALS | {"FERTILIZER"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
@@ -196,7 +195,7 @@ def _possible_actions(obs) -> dict:
         if set(unlocked) >= _ALL_QUADRANTS and "BUY_LAND" in market:
             market.remove("BUY_LAND")
     for item, count in shed.items():
-        if item not in _UNSELLABLE:
+        if item not in _ANIMALS:
             for n in range(1, count + 1):
                 market.append(["SELL", item, n])
 
