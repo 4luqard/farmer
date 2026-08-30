@@ -587,9 +587,30 @@ def test_when_farmer_have_some_money():
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": ["HIRE",
-                   ["BUY_SEED", "WHEAT"], ["BUY_SEED", "CARROT"], ["BUY_SEED", "TOMATO"],
-                   ["BUY_PRODUCT", "WHEAT"],
+                   ["BUY_SEED", "WHEAT", 1], ["BUY_SEED", "CARROT", 1], ["BUY_SEED", "TOMATO", 1],
+                   ["BUY_PRODUCT", "WHEAT", 1],
                    ["SELL", "WHEAT", 1]]
+
+    }   
+
+
+def test_when_the_shed_is_full():
+    """When the non-seed item count is 100 (limit)"""
+    assert _possible_actions({
+        "player": 0,
+        "farms": [
+            {"money": 70, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fertilizer=True), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": {
+            "prices": _market_prices()
+        },
+        "private": {"shed": {"SHEEP": 38, "FERTILIZER": 47, "GOOSE": 15}, "inventories": [{"COW": 10}, {}], "seeds": {"CARROT": 2}}
+    }) == {
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]],
+        "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
+                   "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
+        "market": ["HIRE"]
 
     }   
 

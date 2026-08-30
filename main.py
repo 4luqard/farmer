@@ -37,6 +37,7 @@ def _opponent_tracker(obs) -> dict:
 
 _SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
 _BOARD_SIZE = 10
+_SHED_CAPACITY = 100
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
 _UNSELLABLE = _ANIMALS | {"FERTILIZER"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
@@ -176,6 +177,7 @@ def _possible_actions(obs) -> dict:
     money = farm.get("money")
     prices = obs.get("market", {}).get("prices", {})
     unlocked = farm.get("unlocked_quadrants") or ()
+    shed_full = sum(shed.values()) >= _SHED_CAPACITY
     market = []
     if money is None or money > 0:
         priced = [
@@ -185,6 +187,8 @@ def _possible_actions(obs) -> dict:
         priced += [(["BUY_SEED", c, 1], cost) for c, cost in _SEED_COSTS.items()]
         priced += [(["BUY_PRODUCT", p, 1], prices.get(p)) for p in ("WHEAT", "FERTILIZER")]
         priced += [(["BUY_ANIMAL", a, 1], cost) for a, cost in _ANIMAL_COSTS.items()]
+        if shed_full:
+            priced = priced[:2]
         market = [
             action for action, cost in priced
             if money is None or (cost is not None and cost <= money)
@@ -196,7 +200,7 @@ def _possible_actions(obs) -> dict:
             for n in range(1, count + 1):
                 market.append(["SELL", item, n])
 
-    if _shed_adjacent(farmer_pos):
+    if not shed_full and _shed_adjacent(farmer_pos):
         for item, count in shed.items():
             for n in range(1, count + 1):
                 farmer.append(["PICKUP", item, n])
@@ -209,7 +213,7 @@ def _possible_actions(obs) -> dict:
         hand_carried = carried[i + 1] if len(carried) > i + 1 else None
         hand = _base_actions(_tile_unlocked(farm, hand_pos), seed, hand_pos,
                              _tile_at(farm, hand_pos), hand_carried, day)
-        if _shed_adjacent(hand_pos):
+        if not shed_full and _shed_adjacent(hand_pos):
             for item, count in shed.items():
                 for n in range(1, count + 1):
                     hand.append(["PICKUP", item, n])
