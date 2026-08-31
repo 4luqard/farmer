@@ -5,7 +5,16 @@ __all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions"]
 # ---- Farmer agent ----
 
 def laziest_farmer(obs):
-    # Buy one wheat seed on the very first turn, then PASS forever after.
+    """Submitted agent: open with one wheat seed, then do nothing at all.
+
+    Args:
+        obs: The observation dict for this step. Only "step" is read.
+
+    Returns:
+        An action dict {"farmer", "hands", "market"}: on step 0 the farmer
+        PASSes and the market order is one ["BUY_SEED", "WHEAT", 1]; on every
+        later step the farmer PASSes and no orders are placed.
+    """
     if obs.get("step", 0) == 0:
         return {"farmer": ["PASS"], "hands": [], "market": [["BUY_SEED", "WHEAT", 1]]}
     return {"farmer": ["PASS"], "hands": [], "market": []}
@@ -17,6 +26,21 @@ _opponent_cache = {}  # in-memory only: resets on process start, i.e. per match
 
 
 def _opponent_tracker(obs) -> dict:
+    """Summarise the opponent's farm, remembering it for the next step.
+
+    Reads the other player's farm (farms[1 - player]) and stores it in the
+    module-global _opponent_cache so the following step can look back at it.
+    The cache lives in memory only, so it resets once per match.
+
+    Args:
+        obs: The observation dict; "farms", "player" and "step" are read.
+
+    Returns:
+        The opponent's farm dict plus two derived keys: "prev_money", their
+        money as of the previous step (falling back to their current money at
+        step 0, or when the remembered farm carried no money key), and
+        "planted_count", the number of PLANT tiles on their grid.
+    """
     global _opponent_cache
     current = obs["farms"][1 - obs["player"]]
     previous = {} if obs.get("step") == 0 else _opponent_cache
@@ -54,6 +78,15 @@ _MARKET_PARAMS = {  # scarcity-side price curve, python-kit/README.md L222-232
 
 
 def _hire_cost(hires_today):
+    """Coin cost of the next hire, which grows along the Fibonacci sequence.
+
+    Args:
+        hires_today: How many hands have already been hired today.
+
+    Returns:
+        The cost of one more hire: 1, 1, 2, 3, 5, ... for 0, 1, 2, 3, 4 hires
+        already made today.
+    """
     a, b = 1, 1
     for _ in range(hires_today):
         a, b = b, a + b
@@ -61,6 +94,16 @@ def _hire_cost(hires_today):
 
 
 def _shape(func, x):
+    """Apply a market price curve's shape function.
+
+    Args:
+        func: Curve name from _MARKET_PARAMS, "sqrt" or "linear".
+        x: The curve input; negative values are clamped to 0.
+
+    Returns:
+        The square root of x for "sqrt", otherwise x itself — unknown names
+        deliberately fall back to the linear curve.
+    """
     x = max(0.0, x)
     return x ** 0.5 if func == "sqrt" else x  # "linear" + documented fallback
 
@@ -73,11 +116,31 @@ def _buy_price(item, inv):
 
 
 def _land_cost(unlocked):
+    """Coin cost of unlocking the next quadrant.
+
+    Args:
+        unlocked: The farm's unlocked quadrant names; duplicates are ignored.
+
+    Returns:
+        1000, 2000 or 4000 for the 2nd, 3rd or 4th quadrant, or None when no
+        quadrant is recorded as unlocked or all four already are.
+    """
     n = len(set(unlocked))
     return _LAND_COSTS[n - 1] if 1 <= n <= len(_LAND_COSTS) else None
 
 
 def _apply_carried_inventory(actions, items):
+    """Append the PLACE and DROP actions for one unit's carried items.
+
+    Args:
+        actions: The unit's action list, extended in place.
+        items: {item: count} the unit is carrying.
+
+    Returns:
+        None. actions gains a ["PLACE", item, n] for every partial quantity
+        1..count of each item, then a single trailing "DROP" if anything was
+        appended.
+    """
     dropped = False
     for item, count in items.items():
         for n in range(1, count + 1):
@@ -88,16 +151,45 @@ def _apply_carried_inventory(actions, items):
 
 
 def _shed_pickups(shed):
+    """Build the PICKUP actions for a unit standing next to the shed.
+
+    Args:
+        shed: {item: count} currently stored in the shed.
+
+    Returns:
+        A new list of ["PICKUP", item, n] for every partial quantity 1..count,
+        animals first and the shed's own order kept within each group.
+    """
     ordered = sorted(shed.items(), key=lambda kv: kv[0] not in _ANIMALS)  # stable: animals first
     return [["PICKUP", item, n] for item, count in ordered for n in range(1, count + 1)]
 
 
 def _quadrant(pos):
+    """Name the quadrant a board position falls in.
+
+    Args:
+        pos: (x, y) board position.
+
+    Returns:
+        "NW", "NE", "SW" or "SE" — y < 5 is North and x < 5 is West on the
+        10x10 board.
+    """
     x, y = pos
     return ("N" if y < 5 else "S") + ("W" if x < 5 else "E")
 
 
 def _tile_unlocked(farm, pos):
+    """Whether a unit's tile sits in a quadrant the farm owns.
+
+    Args:
+        farm: The player's farm dict; "unlocked_quadrants" is read.
+        pos: (x, y) board position, or None when unknown.
+
+    Returns:
+        True when pos falls in an unlocked quadrant. Unknowns are permissive:
+        a missing "unlocked_quadrants" key or a None position both count as
+        unlocked.
+    """
     unlocked = farm.get("unlocked_quadrants")
     if unlocked is None or pos is None:
         return True
@@ -105,10 +197,30 @@ def _tile_unlocked(farm, pos):
 
 
 def _shed_adjacent(pos):
+    """Whether a unit can reach the shed from where it stands.
+
+    Args:
+        pos: (x, y) board position, or None when unknown.
+
+    Returns:
+        True when pos is one of the four centre tiles (4, 4), (5, 4), (4, 5)
+        and (5, 5); a None position also counts as adjacent.
+    """
     return pos is None or tuple(pos) in _SHED_ADJACENT
 
 
 def _tile_at(farm, pos):
+    """Look up the tile a unit is standing on.
+
+    Args:
+        farm: The player's farm dict; "tiles" is a row-major grid indexed
+            tiles[y][x].
+        pos: (x, y) board position, or None when unknown.
+
+    Returns:
+        The tile at pos (a dict, "LOCKED", or None), or None when pos is
+        missing, the farm carries no grid, or pos falls off the grid.
+    """
     if pos is None:
         return None
     x, y = pos
@@ -122,6 +234,15 @@ def _tile_at(farm, pos):
 
 
 def _movement_actions(pos):
+    """List the moves that keep a unit on the board.
+
+    Args:
+        pos: (x, y) board position, or None when unknown.
+
+    Returns:
+        "PASS" plus the compass directions that stay inside the 10x10 board;
+        a None position yields all four directions.
+    """
     actions = ["PASS", "NORTH", "SOUTH", "EAST", "WEST"]
     if pos is None:
         return actions
@@ -138,6 +259,30 @@ def _movement_actions(pos):
 
 
 def _base_actions(unlocked, seed, pos=None, tile=None, carried=None, day=0):
+    """List every action one unit can take on the tile it stands on.
+
+    Branches on what the tile holds. A locked tile allows movement only. A
+    WEED can be DUG. A PLANT can be WATERed while dry, DUG, FERTILIZEd when
+    the unit carries fertilizer and the tile is not already fertilized through
+    day, and HARVESTed once it has yield units and has reached its crop's
+    first yield day. A COOP or PASTURE can be DUG and have a compatible
+    carried animal PLACEd while empty, or be CAREd for, FED wheat, emptied of
+    fertilizer and HARVESTed once occupied. Any other tile can be built on or
+    planted.
+
+    Args:
+        unlocked: Whether the unit's quadrant is owned; falsy means movement
+            only.
+        seed: {crop: count} of seeds in stock, for the PLANT actions.
+        pos: (x, y) board position, or None when unknown.
+        tile: The tile the unit stands on, as returned by _tile_at.
+        carried: {item: count} the unit is carrying, or None.
+        day: The current in-game day, for fertilizer and harvest timing.
+
+    Returns:
+        A list mixing bare strings ("DIG") and lists (["PLANT", "WHEAT"],
+        ["PLACE", "GOOSE", 1]).
+    """
     carried = carried or {}
     actions = _movement_actions(pos)
     if not unlocked:
@@ -181,6 +326,23 @@ def _base_actions(unlocked, seed, pos=None, tile=None, carried=None, day=0):
 
 
 def _possible_actions(obs) -> dict:
+    """Enumerate every action available to the current player this step.
+
+    Args:
+        obs: The observation dict; "farms", "player", "day", the market
+            inventory and the "private" seeds, inventories and shed are read.
+
+    Returns:
+        {"farmer": [...], "hands": [[...], ...], "market": [...]}, where
+        "hands" holds one action list per hired hand. Each unit's list comes
+        from _base_actions, plus the shed PICKUP, PLACE and DROP actions when
+        that unit stands beside the shed. The market list holds the HIRE,
+        BUY_LAND, BUY_SEED, BUY_PRODUCT and BUY_ANIMAL orders the farm can
+        afford — dropping the ones that would add to a full shed, and BUY_LAND
+        once every quadrant is owned — followed by a ["SELL", item, n] for
+        every partial quantity of each non-animal shed item, which needs no
+        unit beside the shed.
+    """
     seed = obs.get("private", {}).get("seeds", {})
 
     farms = obs.get("farms", [])
