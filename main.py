@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions"]
+__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state"]
 
 
 # ---- Farmer agent ----
@@ -404,3 +404,24 @@ def _possible_actions(obs) -> dict:
         hand_lists.append(hand)
 
     return {"farmer": farmer, "hands": hand_lists, "market": market}
+
+
+# ---- Forward simulation ----
+
+def _clone_state(obs):
+    """Deep-copy an observation so a forward simulation can mutate it freely.
+
+    Args:
+        obs: A value from the observation tree — a dict, a list, or a leaf
+            (int, str, bool, None, ...).
+
+    Returns:
+        A recursive copy: every dict and list is rebuilt fresh; immutable
+        leaves are returned as-is (they can't be mutated, so sharing them is
+        safe and avoids needless copying).
+    """
+    if isinstance(obs, dict):
+        return {k: _clone_state(v) for k, v in obs.items()}
+    if isinstance(obs, list):
+        return [_clone_state(v) for v in obs]
+    return obs

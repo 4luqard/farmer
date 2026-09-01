@@ -6,7 +6,7 @@ import sys
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-from main import *
+from main import _possible_actions
 
 def _farm_tiles(unlocked_quadrants):
     """Generate a 10x10 farm according to unlocked quadrants"""
