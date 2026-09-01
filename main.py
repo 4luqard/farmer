@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state"]
+__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal"]
 
 
 # ---- Farmer agent ----
@@ -408,6 +408,10 @@ def _possible_actions(obs) -> dict:
 
 # ---- Forward simulation ----
 
+_TURNS_PER_DAY = 24  # python-kit/README.md L355
+_EPISODE_STEPS = 720  # python-kit/README.md L351
+
+
 def _clone_state(obs):
     """Deep-copy an observation so a forward simulation can mutate it freely.
 
@@ -425,3 +429,17 @@ def _clone_state(obs):
     if isinstance(obs, list):
         return [_clone_state(v) for v in obs]
     return obs
+
+
+def _is_terminal(obs):
+    """Check whether the season has reached its final turn.
+
+    Args:
+        obs: The observation dict for the current turn; reads "day" and
+            "hour" (both 0-indexed), defaulting missing values to 0.
+
+    Returns:
+        True once elapsed turns (day * turns-per-day + hour) reach the
+        season's total turn count; False otherwise.
+    """
+    return obs.get("day", 0) * _TURNS_PER_DAY + obs.get("hour", 0) >= _EPISODE_STEPS
