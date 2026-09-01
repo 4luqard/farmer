@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal"]
+__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal", "_apply_action"]
 
 
 # ---- Farmer agent ----
@@ -443,3 +443,70 @@ def _is_terminal(obs):
         season's total turn count; False otherwise.
     """
     return obs.get("day", 0) * _TURNS_PER_DAY + obs.get("hour", 0) >= _EPISODE_STEPS
+
+
+def _move(pos, action):
+    """Apply one movement action to a board position.
+
+    Args:
+        pos: [x, y] board position.
+        action: "NORTH", "SOUTH", "EAST", "WEST", or any other action (e.g.
+            "PASS"), which leaves the position unchanged.
+
+    Returns:
+        A new [x, y], one cell closer in that direction; moves off the edge
+        of the board are no-ops (python-kit/README.md L43).
+    """
+    x, y = pos
+    if action == "NORTH" and y > 0:
+        y -= 1
+    elif action == "SOUTH" and y < _BOARD_SIZE - 1:
+        y += 1
+    elif action == "WEST" and x > 0:
+        x -= 1
+    elif action == "EAST" and x < _BOARD_SIZE - 1:
+        x += 1
+    return [x, y]
+
+
+def _apply_action(obs, action_dict):
+    """Advance one player's forward-simulated turn by one hour.
+
+    Applies this step's chosen action to the acting player's farmer and each
+    hired hand, then advances the turn clock. Only PASS and the four
+    movement directions are handled so far — the rest of
+    python-kit/README.md's "Turn Processing Order" (market orders, day
+    refresh, price/income updates, ...) is deferred to later tests, per the
+    walking-skeleton approach.
+
+    Args:
+        obs: The observation dict for the current turn; left unchanged.
+        action_dict: {"farmer": [...], "hands": [[...], ...], "market": [...]},
+            each unit list holding its one chosen action for this turn.
+
+    Returns:
+        A new state: the acting player's farmer and hands moved per their
+        chosen action, and "hour" advanced by one, rolling "day" over once
+        "hour" reaches _TURNS_PER_DAY.
+    """
+    state = _clone_state(obs)
+    farms = state.get("farms", [])
+    player = state.get("player", 0)
+    farm = farms[player] if player < len(farms) else {}
+
+    farmer_action = action_dict.get("farmer") or []
+    if farmer_action and farm.get("farmer") is not None:
+        farm["farmer"] = _move(farm["farmer"], farmer_action[0])
+
+    hands = farm.get("hands", [])
+    for i, hand_action in enumerate(action_dict.get("hands", [])):
+        if hand_action and i < len(hands):
+            hands[i] = _move(hands[i], hand_action[0])
+
+    hour = state.get("hour", 0) + 1
+    if hour >= _TURNS_PER_DAY:
+        hour = 0
+        state["day"] = state.get("day", 0) + 1
+    state["hour"] = hour
+
+    return state
