@@ -438,22 +438,40 @@ _TURNS_PER_DAY = 24  # python-kit/README.md L355
 _EPISODE_STEPS = 720  # python-kit/README.md L351
 
 
-def _clone_state(obs):
+def _clone_state(obs, memo=None):
     """Deep-copy an observation so a forward simulation can mutate it freely.
 
     Args:
         obs: A value from the observation tree — a dict, a list, or a leaf
             (int, str, bool, None, ...).
+        memo: {id(source): clone} of objects already copied in this call,
+            threaded through the recursion. Callers omit it; the outermost
+            call starts a fresh one, mirroring copy.deepcopy.
 
     Returns:
-        A recursive copy: every dict and list is rebuilt fresh; immutable
-        leaves are returned as-is (they can't be mutated, so sharing them is
-        safe and avoids needless copying).
+        A recursive copy: every dict and list is rebuilt fresh, but a source
+        object visited more than once (e.g. two grid rows aliasing the same
+        list) resolves to the same clone every time instead of diverging
+        copies; immutable leaves are returned as-is (they can't be mutated,
+        so sharing them is safe and avoids needless copying).
     """
+    if memo is None:
+        memo = {}
+    key = id(obs)
+    if key in memo:
+        return memo[key]
     if isinstance(obs, dict):
-        return {k: _clone_state(v) for k, v in obs.items()}
+        clone = {}
+        memo[key] = clone
+        for k, v in obs.items():
+            clone[k] = _clone_state(v, memo)
+        return clone
     if isinstance(obs, list):
-        return [_clone_state(v) for v in obs]
+        clone = []
+        memo[key] = clone
+        for v in obs:
+            clone.append(_clone_state(v, memo))
+        return clone
     return obs
 
 
