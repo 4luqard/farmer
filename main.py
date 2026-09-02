@@ -469,12 +469,32 @@ def _move(pos, action):
     return [x, y]
 
 
+def _apply_tile_action(farm, pos, action):
+    """Apply one unit's action to the tile it stands on, if it has an effect.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        pos: [x, y] board position of the acting unit, or None.
+        action: The unit's chosen action for this turn.
+
+    Returns:
+        None. "WATER" marks the PLANT tile at pos as watered for today; every
+        other action is deferred to later tests, per the walking-skeleton
+        approach.
+    """
+    if action != "WATER":
+        return
+    tile = _tile_at(farm, pos)
+    if isinstance(tile, dict) and tile.get("kind") == "PLANT":
+        tile["watered_today"] = True
+
+
 def _apply_action(obs, action_dict):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
-    hired hand, then advances the turn clock. Only PASS and the four
-    movement directions are handled so far — the rest of
+    hired hand, then advances the turn clock. Only PASS, the four movement
+    directions, and WATER are handled so far — the rest of
     python-kit/README.md's "Turn Processing Order" (market orders, day
     refresh, price/income updates, ...) is deferred to later tests, per the
     walking-skeleton approach.
@@ -496,11 +516,13 @@ def _apply_action(obs, action_dict):
 
     farmer_action = action_dict.get("farmer") or []
     if farmer_action and farm.get("farmer") is not None:
+        _apply_tile_action(farm, farm["farmer"], farmer_action[0])
         farm["farmer"] = _move(farm["farmer"], farmer_action[0])
 
     hands = farm.get("hands", [])
     for i, hand_action in enumerate(action_dict.get("hands", [])):
         if hand_action and i < len(hands):
+            _apply_tile_action(farm, hands[i], hand_action[0])
             hands[i] = _move(hands[i], hand_action[0])
 
     hour = state.get("hour", 0) + 1

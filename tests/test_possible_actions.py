@@ -17,7 +17,7 @@ def _farm_tiles(unlocked_quadrants):
     elif "NE" in unlocked_quadrants:
         return [[None] * 10] * 5 + [["LOCKED"] * 10] * 5
     else:
-        return [[None] * 5 + ["LOCKED"]] * 5 + [["LOCKED"] * 10] * 5
+        return [[None] * 5 + ["LOCKED"] * 5] * 5 + [["LOCKED"] * 10] * 5
 
 def _weed_tile(y, x, unlocked_quadrants=['NW']):
     """Place a weed at (x, y) coordinates (0 indexed coordinates)"""
@@ -27,7 +27,7 @@ def _weed_tile(y, x, unlocked_quadrants=['NW']):
 
 def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
                watered=False, unwatered=1, units=0,
-               lifespan=-1, fertilized=-1,
+               lifespan=5, fertilized=-1,
                unlocked_quadrants=['NW']):
     """Place a plant at (x, y) coordinates (0 indexed coordinates)"""
     tiles = _farm_tiles(unlocked_quadrants)
