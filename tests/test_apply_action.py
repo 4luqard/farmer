@@ -47,7 +47,7 @@ def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
     return tiles
 
 
-def _animal_tile(y, x, kind="COOP", animal=None, plcd_dy=0,
+def _animal_tile(y, x, kind="COOP", animal=None, plcd_dy=-1,
                fed=False, unfed=0, units=0,
                cared=False, fertilizer=False, bonus=0,
                unlocked_quadrants=['NW']):
@@ -323,7 +323,7 @@ def test_build_coop():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, plcd_dy=1)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3)
 
     
 def test_build_pasture():
@@ -342,7 +342,7 @@ def test_build_pasture():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, kind="PASTURE", plcd_dy=1)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, kind="PASTURE")
 
     
 def test_feed():
@@ -351,7 +351,7 @@ def test_feed():
         "day": 1,
         "hour": 3,
         "farms": [
-            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False), "unlocked_quadrants": ['NW']},
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
         "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
@@ -361,7 +361,7 @@ def test_feed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=True)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=True, unfed=0)
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 1}
 
     
