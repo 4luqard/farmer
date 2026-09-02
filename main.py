@@ -513,7 +513,7 @@ def _move(pos, action):
     return [x, y]
 
 
-def _apply_tile_action(farm, pos, action):
+def _apply_tile_action(farm, pos, action, day):
     """Apply one unit's action to the tile it stands on, if it has an effect.
 
     Dispatches on the tile's kind first (mirroring _base_actions), then on
@@ -524,10 +524,13 @@ def _apply_tile_action(farm, pos, action):
         farm: The acting player's farm dict, mutated in place.
         pos: [x, y] board position of the acting unit, or None.
         action: The unit's chosen action for this turn.
+        day: The current in-game day, used to date FERTILIZE's bonus window.
 
     Returns:
-        None. On a PLANT tile: "WATER" marks it watered for today; "HARVEST"
-        clears the tile to None when its crop has no subsequent yields
+        None. On a PLANT tile: "WATER" marks it watered for today;
+        "FERTILIZE" sets fertilized_until_day to day + 2, a 3-day bonus
+        window starting today (python-kit/README.md); "HARVEST" clears the
+        tile to None when its crop has no subsequent yields
         (_ONE_TIME_CROPS), and otherwise (ongoing crops TOMATO/STRAWBERRY)
         resets yield_units to 0. On an occupied COOP/PASTURE: "HARVEST"
         resets yield_units to 0. Every other tile-kind/action combination is
@@ -540,6 +543,8 @@ def _apply_tile_action(farm, pos, action):
     if kind == "PLANT":
         if action == "WATER":
             tile["watered_today"] = True
+        elif action == "FERTILIZE":
+            tile["fertilized_until_day"] = day + 2
         elif action == "HARVEST":
             if tile.get("crop") in _ONE_TIME_CROPS:
                 _set_tile(farm, pos, None)
@@ -555,8 +560,8 @@ def _apply_action(obs, action_dict):
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, and WATER are handled so far — the rest of
-    python-kit/README.md's "Turn Processing Order" (market orders, day
+    directions, WATER, FERTILIZE, and HARVEST are handled so far — the rest
+    of python-kit/README.md's "Turn Processing Order" (market orders, day
     refresh, price/income updates, ...) is deferred to later tests, per the
     walking-skeleton approach.
 
@@ -575,15 +580,17 @@ def _apply_action(obs, action_dict):
     player = state.get("player", 0)
     farm = farms[player] if player < len(farms) else {}
 
+    day = state.get("day", 0)
+
     farmer_action = action_dict.get("farmer") or []
     if farmer_action and farm.get("farmer") is not None:
-        _apply_tile_action(farm, farm["farmer"], farmer_action[0])
+        _apply_tile_action(farm, farm["farmer"], farmer_action[0], day)
         farm["farmer"] = _move(farm["farmer"], farmer_action[0])
 
     hands = farm.get("hands", [])
     for i, hand_action in enumerate(action_dict.get("hands", [])):
         if hand_action and i < len(hands):
-            _apply_tile_action(farm, hands[i], hand_action[0])
+            _apply_tile_action(farm, hands[i], hand_action[0], day)
             hands[i] = _move(hands[i], hand_action[0])
 
     hour = state.get("hour", 0) + 1
