@@ -69,6 +69,7 @@ _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELO
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
+_FEED_WHEAT_COST = 1  # WHEAT per FEED; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_feed
 _LAND_COSTS = [1000, 2000, 4000]
 _MARKET_I0 = 10000
 _PRICE_FLOOR = 1
@@ -565,10 +566,13 @@ def _apply_tile_action(farm, pos, action, day):
         "HARVEST" resets yield_units to 0; "DIG" clears it to None — the
         documented no-op for a structure with an animal on it
         (python-kit/README.md) is deferred, since no test exercises it yet.
-        On an empty tile: "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-
-        placed COOP/PASTURE tile (_new_structure_tile). Every other
-        tile-kind/action combination is deferred to later tests, per the
-        walking-skeleton approach.
+        "FEED" marks it fed_today for the day — the matching WHEAT
+        deduction is applied separately by _apply_shed_action, since this
+        function has no access to private inventories. On an empty tile:
+        "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-placed COOP/PASTURE
+        tile (_new_structure_tile). Every other tile-kind/action
+        combination is deferred to later tests, per the walking-skeleton
+        approach.
     """
     tile = _tile_at(farm, pos)
     if tile is None:
@@ -600,10 +604,12 @@ def _apply_tile_action(farm, pos, action, day):
             tile["yield_units"] = 0
         elif action == "DIG":
             _set_tile(farm, pos, None)
+        elif action == "FEED":
+            tile["fed_today"] = True
 
 
 def _apply_shed_action(private, index, action):
-    """Apply one unit's shed-facing action, if it has an effect.
+    """Apply one unit's private-inventory-facing action, if it has an effect.
 
     Mirrors _apply_tile_action's dispatch shape, but for actions that touch
     the private inventories/shed rather than a farm tile.
@@ -619,23 +625,32 @@ def _apply_shed_action(private, index, action):
         private["shed"] (created if absent), each item capped by the shed's
         remaining room under _SHED_CAPACITY with any excess discarded outright
         (python-kit/README.md), then empties the unit's inventory entirely.
+        "FEED" deducts _FEED_WHEAT_COST WHEAT from the unit's inventory; the
+        matching fed_today flag on the tile is set separately by
+        _apply_tile_action, which has access to the farm but not private.
         Shed-adjacency is not re-checked here: _possible_actions only ever
-        offers DROP to a unit already standing beside the shed. Every other
-        action is deferred to later tests.
+        offers DROP to a unit already standing beside the shed; likewise
+        FEED's WHEAT-availability precondition is only checked by
+        _possible_actions, not re-validated here. Every other action is
+        deferred to later tests.
     """
-    if action != "DROP":
+    if action not in ("DROP", "FEED"):
         return
     inventories = private.get("inventories")
     if not inventories or index >= len(inventories):
         return
-    shed = private.setdefault("shed", {})
-    room = _SHED_CAPACITY - sum(shed.values())
-    for item, count in inventories[index].items():
-        added = max(0, min(count, room))
-        if added:
-            shed[item] = shed.get(item, 0) + added
-            room -= added
-    inventories[index] = {}
+    if action == "DROP":
+        shed = private.setdefault("shed", {})
+        room = _SHED_CAPACITY - sum(shed.values())
+        for item, count in inventories[index].items():
+            added = max(0, min(count, room))
+            if added:
+                shed[item] = shed.get(item, 0) + added
+                room -= added
+        inventories[index] = {}
+    elif action == "FEED":
+        inventory = inventories[index]
+        inventory["WHEAT"] = inventory.get("WHEAT", 0) - _FEED_WHEAT_COST
 
 
 def _apply_action(obs, action_dict):
@@ -643,8 +658,8 @@ def _apply_action(obs, action_dict):
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, HARVEST, DIG, and DROP are handled so far —
-    the rest of python-kit/README.md's "Turn Processing Order" (market
+    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, and FEED are handled
+    so far — the rest of python-kit/README.md's "Turn Processing Order" (market
     orders, day refresh, price/income updates, ...) is deferred to later
     tests, per the walking-skeleton approach.
 
