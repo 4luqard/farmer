@@ -510,10 +510,10 @@ def _apply_tile_action(farm, pos, action):
     Returns:
         None. On a PLANT tile: "WATER" marks it watered for today; "HARVEST"
         clears the tile to None when its crop has no subsequent yields
-        (_ONE_TIME_CROPS) — ongoing crops (TOMATO/STRAWBERRY) are deferred.
-        On an occupied COOP/PASTURE: "HARVEST" resets yield_units to 0. Every
-        other tile-kind/action combination is deferred to later tests, per
-        the walking-skeleton approach.
+        (_ONE_TIME_CROPS), and otherwise (ongoing crops TOMATO/STRAWBERRY)
+        resets yield_units to 0. On an occupied COOP/PASTURE: "HARVEST"
+        resets yield_units to 0. Every other tile-kind/action combination is
+        deferred to later tests, per the walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
     if not isinstance(tile, dict):
@@ -522,9 +522,11 @@ def _apply_tile_action(farm, pos, action):
     if kind == "PLANT":
         if action == "WATER":
             tile["watered_today"] = True
-        elif action == "HARVEST" and tile.get("crop") in _ONE_TIME_CROPS:
-            _set_tile(farm, pos, None)
-        # ongoing crops (TOMATO/STRAWBERRY): yield-reset/decay deferred, not exercised by any test
+        elif action == "HARVEST":
+            if tile.get("crop") in _ONE_TIME_CROPS:
+                _set_tile(farm, pos, None)
+            else:
+                tile["yield_units"] = 0
     elif kind in _STRUCTURE_ANIMALS:
         if action == "HARVEST":
             tile["yield_units"] = 0
