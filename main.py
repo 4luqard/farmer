@@ -67,6 +67,7 @@ _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
+_ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _LAND_COSTS = [1000, 2000, 4000]
 _MARKET_I0 = 10000
@@ -231,6 +232,31 @@ def _tile_at(farm, pos):
     if x < 0 or x >= len(row):
         return None
     return row[x]
+
+
+def _set_tile(farm, pos, value):
+    """Write a new value into the tile a unit stands on.
+
+    Args:
+        farm: The player's farm dict, mutated in place; "tiles" is a
+            row-major grid indexed tiles[y][x].
+        pos: (x, y) board position, or None when unknown.
+        value: The new tile to write (a dict, "LOCKED", or None).
+
+    Returns:
+        None. No-op when pos is missing, the farm carries no grid, or pos
+        falls off the grid (same guards as _tile_at).
+    """
+    if pos is None:
+        return
+    x, y = pos
+    tiles = farm.get("tiles")
+    if not tiles or y < 0 or y >= len(tiles):
+        return
+    row = tiles[y]
+    if x < 0 or x >= len(row):
+        return
+    row[x] = value
 
 
 def _movement_actions(pos):
@@ -472,21 +498,36 @@ def _move(pos, action):
 def _apply_tile_action(farm, pos, action):
     """Apply one unit's action to the tile it stands on, if it has an effect.
 
+    Dispatches on the tile's kind first (mirroring _base_actions), then on
+    the action, so each newly-supported action lands inside the branch for
+    the kind it already applies to.
+
     Args:
         farm: The acting player's farm dict, mutated in place.
         pos: [x, y] board position of the acting unit, or None.
         action: The unit's chosen action for this turn.
 
     Returns:
-        None. "WATER" marks the PLANT tile at pos as watered for today; every
-        other action is deferred to later tests, per the walking-skeleton
-        approach.
+        None. On a PLANT tile: "WATER" marks it watered for today; "HARVEST"
+        clears the tile to None when its crop has no subsequent yields
+        (_ONE_TIME_CROPS) — ongoing crops (TOMATO/STRAWBERRY) are deferred.
+        On an occupied COOP/PASTURE: "HARVEST" resets yield_units to 0. Every
+        other tile-kind/action combination is deferred to later tests, per
+        the walking-skeleton approach.
     """
-    if action != "WATER":
-        return
     tile = _tile_at(farm, pos)
-    if isinstance(tile, dict) and tile.get("kind") == "PLANT":
-        tile["watered_today"] = True
+    if not isinstance(tile, dict):
+        return
+    kind = tile.get("kind")
+    if kind == "PLANT":
+        if action == "WATER":
+            tile["watered_today"] = True
+        elif action == "HARVEST" and tile.get("crop") in _ONE_TIME_CROPS:
+            _set_tile(farm, pos, None)
+        # ongoing crops (TOMATO/STRAWBERRY): yield-reset/decay deferred, not exercised by any test
+    elif kind in _STRUCTURE_ANIMALS:
+        if action == "HARVEST":
+            tile["yield_units"] = 0
 
 
 def _apply_action(obs, action_dict):

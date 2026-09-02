@@ -134,5 +134,43 @@ def test_water():
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'][2][3]['watered_today'] == True
 
     
+def test_harvest_plant():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=2), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['HARVEST'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'][2][3] == None
+
+    
+def test_harvest_animal():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['HARVEST'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE")
+
+    
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
