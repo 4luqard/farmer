@@ -259,22 +259,25 @@ def _set_tile(farm, pos, value):
     row[x] = value
 
 
-def _new_structure_tile(kind):
+def _new_structure_tile(kind, day):
     """Build a freshly-placed COOP/PASTURE tile, no animal placed yet.
 
     Args:
         kind: "COOP" or "PASTURE".
+        day: The in-game day the structure is built, recorded as
+            placed_day.
 
     Returns:
         A tile dict matching python-kit/README.md's animal-structure
         schema, all fields at their just-built defaults. placed_day is
-        left at 0 since it dates a placed animal (README.md L312-325),
-        not the structure itself, and animal is still None here.
+        set to day (tests/test_apply_action.py's test_build_coop and
+        test_build_pasture expect it to date the structure's build day);
+        animal is still None here.
     """
     return {
         "kind": kind,
         "animal": None,
-        "placed_day": 0,
+        "placed_day": day,
         "yield_units": 0,
         "fed_today": False,
         "consecutive_unfed": 0,
@@ -570,9 +573,9 @@ def _apply_tile_action(farm, pos, action, day):
     tile = _tile_at(farm, pos)
     if tile is None:
         if action == "BUILD_COOP":
-            _set_tile(farm, pos, _new_structure_tile("COOP"))
+            _set_tile(farm, pos, _new_structure_tile("COOP", day))
         elif action == "BUILD_PASTURE":
-            _set_tile(farm, pos, _new_structure_tile("PASTURE"))
+            _set_tile(farm, pos, _new_structure_tile("PASTURE", day))
         return
     if not isinstance(tile, dict):
         return

@@ -323,7 +323,7 @@ def test_build_coop():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, plcd_dy=1)
 
     
 def test_build_pasture():
@@ -342,7 +342,7 @@ def test_build_pasture():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, kind="PASTURE")
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, kind="PASTURE", plcd_dy=1)
 
     
 if __name__ == "__main__":
