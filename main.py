@@ -527,20 +527,27 @@ def _apply_tile_action(farm, pos, action, day):
         day: The current in-game day, used to date FERTILIZE's bonus window.
 
     Returns:
-        None. On a PLANT tile: "WATER" marks it watered for today;
-        "FERTILIZE" sets fertilized_until_day to day + 2, a 3-day bonus
-        window starting today (python-kit/README.md); "HARVEST" clears the
-        tile to None when its crop has no subsequent yields
-        (_ONE_TIME_CROPS), and otherwise (ongoing crops TOMATO/STRAWBERRY)
-        resets yield_units to 0. On an occupied COOP/PASTURE: "HARVEST"
-        resets yield_units to 0. Every other tile-kind/action combination is
-        deferred to later tests, per the walking-skeleton approach.
+        None. On a WEED tile: "DIG" clears it to None. On a PLANT tile:
+        "WATER" marks it watered for today; "FERTILIZE" sets
+        fertilized_until_day to day + 2, a 3-day bonus window starting today
+        (python-kit/README.md); "HARVEST" clears the tile to None when its
+        crop has no subsequent yields (_ONE_TIME_CROPS), and otherwise
+        (ongoing crops TOMATO/STRAWBERRY) resets yield_units to 0; "DIG"
+        clears it to None regardless of yield state. On a COOP/PASTURE:
+        "HARVEST" resets yield_units to 0; "DIG" clears it to None — the
+        documented no-op for a structure with an animal on it
+        (python-kit/README.md) is deferred, since no test exercises it yet.
+        Every other tile-kind/action combination is deferred to later tests,
+        per the walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
     if not isinstance(tile, dict):
         return
     kind = tile.get("kind")
-    if kind == "PLANT":
+    if kind == "WEED":
+        if action == "DIG":
+            _set_tile(farm, pos, None)
+    elif kind == "PLANT":
         if action == "WATER":
             tile["watered_today"] = True
         elif action == "FERTILIZE":
@@ -550,9 +557,13 @@ def _apply_tile_action(farm, pos, action, day):
                 _set_tile(farm, pos, None)
             else:
                 tile["yield_units"] = 0
+        elif action == "DIG":
+            _set_tile(farm, pos, None)
     elif kind in _STRUCTURE_ANIMALS:
         if action == "HARVEST":
             tile["yield_units"] = 0
+        elif action == "DIG":
+            _set_tile(farm, pos, None)
 
 
 def _apply_action(obs, action_dict):
@@ -560,10 +571,10 @@ def _apply_action(obs, action_dict):
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, and HARVEST are handled so far — the rest
-    of python-kit/README.md's "Turn Processing Order" (market orders, day
-    refresh, price/income updates, ...) is deferred to later tests, per the
-    walking-skeleton approach.
+    directions, WATER, FERTILIZE, HARVEST, and DIG are handled so far — the
+    rest of python-kit/README.md's "Turn Processing Order" (market orders,
+    day refresh, price/income updates, ...) is deferred to later tests, per
+    the walking-skeleton approach.
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
