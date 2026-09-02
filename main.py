@@ -259,6 +259,31 @@ def _set_tile(farm, pos, value):
     row[x] = value
 
 
+def _new_structure_tile(kind):
+    """Build a freshly-placed COOP/PASTURE tile, no animal placed yet.
+
+    Args:
+        kind: "COOP" or "PASTURE".
+
+    Returns:
+        A tile dict matching python-kit/README.md's animal-structure
+        schema, all fields at their just-built defaults. placed_day is
+        left at 0 since it dates a placed animal (README.md L312-325),
+        not the structure itself, and animal is still None here.
+    """
+    return {
+        "kind": kind,
+        "animal": None,
+        "placed_day": 0,
+        "yield_units": 0,
+        "fed_today": False,
+        "consecutive_unfed": 0,
+        "cared_today": False,
+        "fertilizer_available": False,
+        "pending_care_bonus": 0,
+    }
+
+
 def _movement_actions(pos):
     """List the moves that keep a unit on the board.
 
@@ -537,10 +562,18 @@ def _apply_tile_action(farm, pos, action, day):
         "HARVEST" resets yield_units to 0; "DIG" clears it to None — the
         documented no-op for a structure with an animal on it
         (python-kit/README.md) is deferred, since no test exercises it yet.
-        Every other tile-kind/action combination is deferred to later tests,
-        per the walking-skeleton approach.
+        On an empty tile: "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-
+        placed COOP/PASTURE tile (_new_structure_tile). Every other
+        tile-kind/action combination is deferred to later tests, per the
+        walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
+    if tile is None:
+        if action == "BUILD_COOP":
+            _set_tile(farm, pos, _new_structure_tile("COOP"))
+        elif action == "BUILD_PASTURE":
+            _set_tile(farm, pos, _new_structure_tile("PASTURE"))
+        return
     if not isinstance(tile, dict):
         return
     kind = tile.get("kind")
