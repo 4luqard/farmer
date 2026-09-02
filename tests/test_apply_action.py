@@ -266,6 +266,46 @@ def test_dig_empty_coop_pasture():
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'][2][3] == None
 
+
+def test_drop():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"CARROT": 3, "GOOSE": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['DROP'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['shed'] == {"CARROT": 3, "GOOSE": 2}
+    assert _apply_action(original_state, action_dict)['private']['inventories'] == [{}, {}]
+
+
+def test_drop_shed_overflow():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"shed": {"CARROT": 96}, "inventories": [{"CARROT": 3, "GOOSE": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['DROP'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['shed'] == {"CARROT": 99, "GOOSE": 1}
+    assert _apply_action(original_state, action_dict)['private']['inventories'] == [{}, {}]
+
     
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

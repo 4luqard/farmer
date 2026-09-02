@@ -566,15 +566,51 @@ def _apply_tile_action(farm, pos, action, day):
             _set_tile(farm, pos, None)
 
 
+def _apply_shed_action(private, index, action):
+    """Apply one unit's shed-facing action, if it has an effect.
+
+    Mirrors _apply_tile_action's dispatch shape, but for actions that touch
+    the private inventories/shed rather than a farm tile.
+
+    Args:
+        private: The player's private state, mutated in place; "inventories"
+            (indexed [farmer, hand0, hand1, ...]) and "shed" are read/written.
+        index: Which unit is acting: 0 for the farmer, i + 1 for hand i.
+        action: The unit's chosen action for this turn.
+
+    Returns:
+        None. "DROP" moves every item in the unit's inventory into
+        private["shed"] (created if absent), each item capped by the shed's
+        remaining room under _SHED_CAPACITY with any excess discarded outright
+        (python-kit/README.md), then empties the unit's inventory entirely.
+        Shed-adjacency is not re-checked here: _possible_actions only ever
+        offers DROP to a unit already standing beside the shed. Every other
+        action is deferred to later tests.
+    """
+    if action != "DROP":
+        return
+    inventories = private.get("inventories")
+    if not inventories or index >= len(inventories):
+        return
+    shed = private.setdefault("shed", {})
+    room = _SHED_CAPACITY - sum(shed.values())
+    for item, count in inventories[index].items():
+        added = max(0, min(count, room))
+        if added:
+            shed[item] = shed.get(item, 0) + added
+            room -= added
+    inventories[index] = {}
+
+
 def _apply_action(obs, action_dict):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, HARVEST, and DIG are handled so far — the
-    rest of python-kit/README.md's "Turn Processing Order" (market orders,
-    day refresh, price/income updates, ...) is deferred to later tests, per
-    the walking-skeleton approach.
+    directions, WATER, FERTILIZE, HARVEST, DIG, and DROP are handled so far —
+    the rest of python-kit/README.md's "Turn Processing Order" (market
+    orders, day refresh, price/income updates, ...) is deferred to later
+    tests, per the walking-skeleton approach.
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -583,25 +619,30 @@ def _apply_action(obs, action_dict):
 
     Returns:
         A new state: the acting player's farmer and hands moved per their
-        chosen action, and "hour" advanced by one, rolling "day" over once
-        "hour" reaches _TURNS_PER_DAY.
+        chosen action, "DROP" emptied into private["shed"] (created if
+        absent, capped by _SHED_CAPACITY with overflow discarded), and "hour"
+        advanced by one, rolling "day" over once "hour" reaches
+        _TURNS_PER_DAY.
     """
     state = _clone_state(obs)
     farms = state.get("farms", [])
     player = state.get("player", 0)
     farm = farms[player] if player < len(farms) else {}
+    private = state.get("private", {})
 
     day = state.get("day", 0)
 
     farmer_action = action_dict.get("farmer") or []
     if farmer_action and farm.get("farmer") is not None:
         _apply_tile_action(farm, farm["farmer"], farmer_action[0], day)
+        _apply_shed_action(private, 0, farmer_action[0])
         farm["farmer"] = _move(farm["farmer"], farmer_action[0])
 
     hands = farm.get("hands", [])
     for i, hand_action in enumerate(action_dict.get("hands", [])):
         if hand_action and i < len(hands):
             _apply_tile_action(farm, hands[i], hand_action[0], day)
+            _apply_shed_action(private, i + 1, hand_action[0])
             hands[i] = _move(hands[i], hand_action[0])
 
     hour = state.get("hour", 0) + 1
