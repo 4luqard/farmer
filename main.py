@@ -786,14 +786,17 @@ def _apply_shed_action(private, index, action):
         _apply_tile_action, which has access to the farm but not private.
         "COLLECT_FERTILIZER" adds 1 FERTILIZER to the unit's inventory; the
         matching fertilizer_available flag is cleared separately by
-        _apply_tile_action, for the same reason. Shed-adjacency is not
-        re-checked here: _possible_actions only ever offers DROP to a unit
-        already standing beside the shed; likewise FEED's WHEAT-availability
-        and COLLECT_FERTILIZER's fertilizer_available preconditions are only
-        checked by _possible_actions, not re-validated here. Every other
-        action is deferred to later tests.
+        _apply_tile_action, for the same reason. ["PICKUP", item, n] moves
+        up to n of item (default 1) from private["shed"] into the unit's
+        inventory. Shed-adjacency is not re-checked here: _possible_actions
+        only ever offers DROP/PICKUP to a unit already standing beside the
+        shed; likewise FEED's WHEAT-availability and COLLECT_FERTILIZER's
+        fertilizer_available preconditions are only checked by
+        _possible_actions, not re-validated here. Every other action is
+        deferred to later tests.
     """
-    if action not in ("DROP", "FEED", "COLLECT_FERTILIZER"):
+    is_pickup = isinstance(action, list) and action[:1] == ["PICKUP"]
+    if action not in ("DROP", "FEED", "COLLECT_FERTILIZER") and not is_pickup:
         return
     inventories = private.get("inventories")
     if not inventories or index >= len(inventories):
@@ -813,6 +816,20 @@ def _apply_shed_action(private, index, action):
     elif action == "COLLECT_FERTILIZER":
         inventory = inventories[index]
         inventory["FERTILIZER"] = inventory.get("FERTILIZER", 0) + 1
+    elif is_pickup:
+        item = action[1]
+        n = action[2] if len(action) > 2 else 1
+        shed = private.setdefault("shed", {})
+        available = shed.get(item, 0)
+        moved = max(0, min(n, available))
+        if moved:
+            inventory = inventories[index]
+            inventory[item] = inventory.get(item, 0) + moved
+            left = available - moved
+            if left > 0:
+                shed[item] = left
+            else:
+                shed.pop(item, None)
 
 
 def _day_refresh(farm):
@@ -947,7 +964,7 @@ def _apply_action(obs, action_dict):
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Handles PASS, the four
     movement directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED,
-    COLLECT_FERTILIZER, PLACE and PLANT (gated by the all-or-nothing
+    COLLECT_FERTILIZER, PICKUP, PLACE and PLANT (gated by the all-or-nothing
     simultaneous-planting rule), plus a day-rollover's consecutive_unfed
     update (_day_refresh). The rest of python-kit/README.md's "Turn
     Processing Order" (market orders, the remainder of day refresh,
