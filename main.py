@@ -650,15 +650,42 @@ def _apply_shed_action(private, index, action):
         inventory["WHEAT"] = inventory.get("WHEAT", 0) - _FEED_WHEAT_COST
 
 
+def _day_refresh(farm):
+    """Update animal condition for a new day at the day-rollover boundary.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place; "tiles" is
+            scanned for occupied COOP/PASTURE tiles.
+
+    Returns:
+        None. Each occupied animal-structure tile's consecutive_unfed resets
+        to 0 when the animal was fed_today, or increments by 1 otherwise
+        (python-kit/README.md L111-115, L320). fed_today/watered_today's
+        reset-to-false and fertilizer_available's end-of-day True-set
+        (python-kit/README.md L243, L322), plant consecutive_unwatered, and
+        the 2+ escape/weed-conversion rule are all deferred: no test yet
+        exercises any of them, and resetting fed_today here would break
+        test_feed's fed=True expectation post-rollover.
+    """
+    for row in farm.get("tiles") or []:
+        for tile in row:
+            if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS and tile.get("animal") is not None:
+                if tile.get("fed_today"):
+                    tile["consecutive_unfed"] = 0
+                else:
+                    tile["consecutive_unfed"] = tile.get("consecutive_unfed", 0) + 1
+
+
 def _apply_action(obs, action_dict):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, and FEED are handled
-    so far — the rest of python-kit/README.md's "Turn Processing Order" (market
-    orders, day refresh, price/income updates, ...) is deferred to later
-    tests, per the walking-skeleton approach.
+    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, and FEED are handled,
+    plus a day-rollover's consecutive_unfed update (_day_refresh) — the rest
+    of python-kit/README.md's "Turn Processing Order" (market orders, the
+    remainder of day refresh, price/income updates, ...) is deferred to
+    later tests, per the walking-skeleton approach.
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -669,8 +696,8 @@ def _apply_action(obs, action_dict):
         A new state: the acting player's farmer and hands moved per their
         chosen action, "DROP" emptied into private["shed"] (created if
         absent, capped by _SHED_CAPACITY with overflow discarded), and "hour"
-        advanced by one, rolling "day" over once "hour" reaches
-        _TURNS_PER_DAY.
+        advanced by one, rolling "day" over (and running _day_refresh) once
+        "hour" reaches _TURNS_PER_DAY.
     """
     state = _clone_state(obs)
     farms = state.get("farms", [])
@@ -697,6 +724,7 @@ def _apply_action(obs, action_dict):
     if hour >= _TURNS_PER_DAY:
         hour = 0
         state["day"] = state.get("day", 0) + 1
+        _day_refresh(farm)
     state["hour"] = hour
 
     return state
