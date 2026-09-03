@@ -385,5 +385,43 @@ def test_collect_fertilizer():
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"FERTILIZER": 1}
 
     
+def test_care():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=True, unfed=0, cared=False), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['CARE'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=1)
+
+    
+def test_care():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, cared=False), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['CARE'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0)
+
+    
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

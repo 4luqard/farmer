@@ -565,7 +565,9 @@ def _apply_tile_action(farm, pos, action, day):
         (python-kit/README.md) is deferred, since no test exercises it yet.
         "FEED" marks it fed_today for the day — the matching WHEAT
         deduction is applied separately by _apply_shed_action, since this
-        function has no access to private inventories. On an empty tile:
+        function has no access to private inventories. "CARE" marks it
+        cared_today for the day; the yield bonus it banks is applied
+        separately by _day_refresh, at end of day. On an empty tile:
         "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-placed COOP/PASTURE
         tile (_new_structure_tile). Every other tile-kind/action
         combination is deferred to later tests, per the walking-skeleton
@@ -603,6 +605,8 @@ def _apply_tile_action(farm, pos, action, day):
             _set_tile(farm, pos, None)
         elif action == "FEED":
             tile["fed_today"] = True
+        elif action == "CARE":
+            tile["cared_today"] = True
         elif action == "COLLECT_FERTILIZER":
             tile["fertilizer_available"] = False
 
