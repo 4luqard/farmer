@@ -484,12 +484,12 @@ def test_farmer_on_a_coop_tile_with_a_goose_and_wheat():
     assert _possible_actions({
         "player": 0,
         "farms": [
-            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1), "unlocked_quadrants": ['NW']},
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, cared=True), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, ['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
         "private": {"inventories": [{"WHEAT": 10}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "CARE", "FEED"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "FEED"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": _market_base_buy_actions()

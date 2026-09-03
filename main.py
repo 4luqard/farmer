@@ -603,6 +603,8 @@ def _apply_tile_action(farm, pos, action, day):
             _set_tile(farm, pos, None)
         elif action == "FEED":
             tile["fed_today"] = True
+        elif action == "COLLECT_FERTILIZER":
+            tile["fertilizer_available"] = False
 
 
 def _apply_shed_action(private, index, action):
@@ -625,13 +627,16 @@ def _apply_shed_action(private, index, action):
         "FEED" deducts _FEED_WHEAT_COST WHEAT from the unit's inventory; the
         matching fed_today flag on the tile is set separately by
         _apply_tile_action, which has access to the farm but not private.
-        Shed-adjacency is not re-checked here: _possible_actions only ever
-        offers DROP to a unit already standing beside the shed; likewise
-        FEED's WHEAT-availability precondition is only checked by
-        _possible_actions, not re-validated here. Every other action is
-        deferred to later tests.
+        "COLLECT_FERTILIZER" adds 1 FERTILIZER to the unit's inventory; the
+        matching fertilizer_available flag is cleared separately by
+        _apply_tile_action, for the same reason. Shed-adjacency is not
+        re-checked here: _possible_actions only ever offers DROP to a unit
+        already standing beside the shed; likewise FEED's WHEAT-availability
+        and COLLECT_FERTILIZER's fertilizer_available preconditions are only
+        checked by _possible_actions, not re-validated here. Every other
+        action is deferred to later tests.
     """
-    if action not in ("DROP", "FEED"):
+    if action not in ("DROP", "FEED", "COLLECT_FERTILIZER"):
         return
     inventories = private.get("inventories")
     if not inventories or index >= len(inventories):
@@ -648,6 +653,9 @@ def _apply_shed_action(private, index, action):
     elif action == "FEED":
         inventory = inventories[index]
         inventory["WHEAT"] = inventory.get("WHEAT", 0) - _FEED_WHEAT_COST
+    elif action == "COLLECT_FERTILIZER":
+        inventory = inventories[index]
+        inventory["FERTILIZER"] = inventory.get("FERTILIZER", 0) + 1
 
 
 def _day_refresh(farm):
@@ -681,9 +689,10 @@ def _apply_action(obs, action_dict):
 
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, and FEED are handled,
-    plus a day-rollover's consecutive_unfed update (_day_refresh) — the rest
-    of python-kit/README.md's "Turn Processing Order" (market orders, the
+    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED, and
+    COLLECT_FERTILIZER are handled so far, plus a day-rollover's
+    consecutive_unfed update (_day_refresh) — the rest of
+    python-kit/README.md's "Turn Processing Order" (market orders, the
     remainder of day refresh, price/income updates, ...) is deferred to
     later tests, per the walking-skeleton approach.
 
@@ -695,9 +704,10 @@ def _apply_action(obs, action_dict):
     Returns:
         A new state: the acting player's farmer and hands moved per their
         chosen action, "DROP" emptied into private["shed"] (created if
-        absent, capped by _SHED_CAPACITY with overflow discarded), and "hour"
-        advanced by one, rolling "day" over (and running _day_refresh) once
-        "hour" reaches _TURNS_PER_DAY.
+        absent, capped by _SHED_CAPACITY with overflow discarded),
+        "COLLECT_FERTILIZER" adding 1 FERTILIZER to the acting unit's
+        inventory, and "hour" advanced by one, rolling "day" over (and
+        running _day_refresh) once "hour" reaches _TURNS_PER_DAY.
     """
     state = _clone_state(obs)
     farms = state.get("farms", [])
