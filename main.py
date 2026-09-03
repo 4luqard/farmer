@@ -617,9 +617,11 @@ def _apply_tile_action(farm, pos, action, day):
         cared_today for the day; the yield bonus it banks is applied
         separately by _day_refresh, at end of day. On an empty tile:
         "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-placed COOP/PASTURE
-        tile (_new_structure_tile). Every other tile-kind/action
-        combination is deferred to later tests, per the walking-skeleton
-        approach.
+        tile (_new_structure_tile). Planting a seed (_apply_plant) is
+        handled by its own dedicated function instead of here, since it
+        needs private inventory access this function doesn't have. Every
+        other tile-kind/action combination is deferred to later tests, per
+        the walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
     if tile is None:
@@ -749,17 +751,60 @@ def _day_refresh(farm):
             tile["cared_today"] = False
 
 
+def _unit_action(entry):
+    """Extract one unit's chosen action from its action-list entry.
+
+    Farmer entries are always a 1-element list wrapping the action itself,
+    either a bare string ("PASS") or a parameterized list (["PLANT",
+    "CARROT"]). Hand entries follow the same convention when the action
+    takes no argument (["PASS"]), but a parameterized hand action is flat
+    instead of double-wrapped (["PLANT", "CARROT"], not [["PLANT",
+    "CARROT"]]).
+
+    Args:
+        entry: One unit's action-list entry from action_dict["farmer"] or
+            action_dict["hands"][i].
+
+    Returns:
+        entry[0] when entry has exactly one element (unwraps both a bare
+        no-arg action and a farmer's wrapped parameterized action);
+        otherwise entry itself (a flat parameterized hand action).
+    """
+    return entry[0] if len(entry) == 1 else entry
+
+
+def _apply_unit_action(farm, private, index, pos, action, day):
+    """Apply one unit's parsed action and return its post-action position.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place.
+        index: Which unit is acting: 0 for the farmer, i + 1 for hand i.
+        pos: [x, y] board position of the acting unit.
+        action: The unit's parsed action (_unit_action's result): a bare
+            string, or a [verb, *args] list.
+        day: The current in-game day.
+
+    Returns:
+        The unit's new [x, y] position (_move's result). Applies action via
+        the existing _apply_tile_action + _apply_shed_action pair.
+    """
+    _apply_tile_action(farm, pos, action, day)
+    _apply_shed_action(private, index, action)
+    return _move(pos, action)
+
+
 def _apply_action(obs, action_dict):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
-    hired hand, then advances the turn clock. Only PASS, the four movement
-    directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED, and
-    COLLECT_FERTILIZER are handled so far, plus a day-rollover's
-    consecutive_unfed update (_day_refresh) — the rest of
-    python-kit/README.md's "Turn Processing Order" (market orders, the
-    remainder of day refresh, price/income updates, ...) is deferred to
-    later tests, per the walking-skeleton approach.
+    hired hand, then advances the turn clock. Handles PASS, the four
+    movement directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED,
+    COLLECT_FERTILIZER, plus a day-rollover's consecutive_unfed update
+    (_day_refresh). The rest of python-kit/README.md's "Turn Processing
+    Order" (market orders, the remainder of day refresh, price/income
+    updates, ...) is deferred to later tests, per the walking-skeleton
+    approach.
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -767,12 +812,9 @@ def _apply_action(obs, action_dict):
             each unit list holding its one chosen action for this turn.
 
     Returns:
-        A new state: the acting player's farmer and hands moved per their
-        chosen action, "DROP" emptied into private["shed"] (created if
-        absent, capped by _SHED_CAPACITY with overflow discarded),
-        "COLLECT_FERTILIZER" adding 1 FERTILIZER to the acting unit's
-        inventory, and "hour" advanced by one, rolling "day" over (and
-        running _day_refresh) once "hour" reaches _TURNS_PER_DAY.
+        A new state, mutated per the actions described above, with "hour"
+        advanced by one, rolling "day" over (and running _day_refresh) once
+        "hour" reaches _TURNS_PER_DAY.
     """
     state = _clone_state(obs)
     farms = state.get("farms", [])
@@ -782,18 +824,18 @@ def _apply_action(obs, action_dict):
 
     day = state.get("day", 0)
 
-    farmer_action = action_dict.get("farmer") or []
-    if farmer_action and farm.get("farmer") is not None:
-        _apply_tile_action(farm, farm["farmer"], farmer_action[0], day)
-        _apply_shed_action(private, 0, farmer_action[0])
-        farm["farmer"] = _move(farm["farmer"], farmer_action[0])
+    farmer_entry = action_dict.get("farmer") or []
+    hand_entries = action_dict.get("hands") or []
+
+    if farmer_entry and farm.get("farmer") is not None:
+        farmer_action = _unit_action(farmer_entry)
+        farm["farmer"] = _apply_unit_action(farm, private, 0, farm["farmer"], farmer_action, day)
 
     hands = farm.get("hands", [])
-    for i, hand_action in enumerate(action_dict.get("hands", [])):
-        if hand_action and i < len(hands):
-            _apply_tile_action(farm, hands[i], hand_action[0], day)
-            _apply_shed_action(private, i + 1, hand_action[0])
-            hands[i] = _move(hands[i], hand_action[0])
+    for i, entry in enumerate(hand_entries):
+        if entry and i < len(hands):
+            hand_action = _unit_action(entry)
+            hands[i] = _apply_unit_action(farm, private, i + 1, hands[i], hand_action, day)
 
     hour = state.get("hour", 0) + 1
     if hour >= _TURNS_PER_DAY:
