@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import math
+
 __all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal", "_apply_action"]
 
 
@@ -67,15 +69,24 @@ _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
+_MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 10}  # python-kit/README.md Object Types "Time to Max Yield"; one-time crops only
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _FEED_WHEAT_COST = 1  # WHEAT per FEED; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_feed
 _LAND_COSTS = [1000, 2000, 4000]
+_QUADRANT_ORDER = ["NW", "NE", "SW", "SE"]  # BUY_LAND unlock order, python-kit/AGENTS.md: "NE, SW, SE ... $1k/$2k/$4k respectively"
 _MARKET_I0 = 10000
 _PRICE_FLOOR = 1
-_MARKET_PARAMS = {  # scarcity-side price curve, python-kit/README.md L222-232
-    "WHEAT": {"base": 25, "T": 400, "func": "sqrt", "target": 0.80},
-    "FERTILIZER": {"base": 100, "T": 200, "func": "linear", "target": 0.40},
+_MARKET_PARAMS = {  # both sides of the price curve, python-kit/README.md Price Function table L222-232
+    "WHEAT":      {"base": 25,  "T": 400, "below_func": "sqrt",   "below_target": 0.80, "above_func": "log",    "above_target": 0.20},
+    "CARROT":     {"base": 35,  "T": 450, "below_func": "log",    "below_target": 0.20, "above_func": "sqrt",   "above_target": 0.70},
+    "TOMATO":     {"base": 60,  "T": 200, "below_func": "linear", "below_target": 0.40, "above_func": "sqrt",   "above_target": 0.60},
+    "STRAWBERRY": {"base": 120, "T": 100, "below_func": "sqrt",   "below_target": 0.70, "above_func": "linear", "above_target": 1.60},
+    "MELON":      {"base": 250, "T": 300, "below_func": "log",    "below_target": 0.20, "above_func": "sq",     "above_target": 3.60},
+    "EGG":        {"base": 50,  "T": 332, "below_func": "linear", "below_target": 0.40, "above_func": "log",    "above_target": 0.20},
+    "MILK":       {"base": 160, "T": 122, "below_func": "sqrt",   "below_target": 0.60, "above_func": "linear", "above_target": 1.60},
+    "WOOL":       {"base": 200, "T": 105, "below_func": "log",    "below_target": 0.20, "above_func": "sq",     "above_target": 3.20},
+    "FERTILIZER": {"base": 100, "T": 200, "below_func": "linear", "below_target": 0.40, "above_func": "linear", "above_target": 0.40},
 }
 
 
@@ -99,22 +110,59 @@ def _shape(func, x):
     """Apply a market price curve's shape function.
 
     Args:
-        func: Curve name from _MARKET_PARAMS, "sqrt" or "linear".
+        func: Curve name from _MARKET_PARAMS: "sqrt", "sq", "log", or
+            "linear". "log10" is named in python-kit/README.md's abstract
+            formula but no resource in the Price Function table actually
+            uses it, so it is deliberately omitted.
         x: The curve input; negative values are clamped to 0.
 
     Returns:
-        The square root of x for "sqrt", otherwise x itself — unknown names
-        deliberately fall back to the linear curve.
+        sqrt(x) for "sqrt", x**2 for "sq", ln(1+x) for "log" (python-kit/
+        README.md: "log uses ln(1+x), so f(0)=0"), otherwise x itself —
+        unknown names deliberately fall back to the linear curve.
     """
     x = max(0.0, x)
-    return x ** 0.5 if func == "sqrt" else x  # "linear" + documented fallback
+    if func == "sqrt":
+        return x ** 0.5
+    if func == "sq":
+        return x ** 2
+    if func == "log":
+        return math.log1p(x)
+    return x  # "linear" + documented fallback
+
+
+def _price(item, inv):
+    """Market unit price at a given inventory level (python-kit/README.md "The Price Function").
+
+    price(inv) = base + sign * amp * f(|inv - I0|), sign +1 below I0
+    (scarcity) and -1 above I0 (glut), amp = target * base / f(T) using
+    the matching side's shape function and target, floored at
+    _PRICE_FLOOR and rounded to the nearest dollar. At inv == I0 the price
+    is exactly base regardless of side.
+
+    Args:
+        item: Resource name, a key of _MARKET_PARAMS.
+        inv: The market's current inventory of item, at the point (post-buy
+            or pre-sell) the caller wants the price quoted.
+
+    Returns:
+        The integer unit price.
+    """
+    p = _MARKET_PARAMS[item]
+    base, T = p["base"], p["T"]
+    if inv < _MARKET_I0:
+        func, target, sign = p["below_func"], p["below_target"], 1
+    elif inv > _MARKET_I0:
+        func, target, sign = p["above_func"], p["above_target"], -1
+    else:
+        return base
+    amp = target * base / _shape(func, T)
+    return max(_PRICE_FLOOR, int(round(base + sign * amp * _shape(func, abs(inv - _MARKET_I0)))))
 
 
 def _buy_price(item, inv):
     """BUY_PRODUCT unit price: the curve at post-buy inventory (python-kit/README.md L202-214)."""
-    p = _MARKET_PARAMS[item]
-    amp = p["target"] * p["base"] / _shape(p["func"], p["T"])
-    return max(_PRICE_FLOOR, int(round(p["base"] + amp * _shape(p["func"], _MARKET_I0 - inv))))
+    return _price(item, inv)
 
 
 def _land_cost(unlocked):
