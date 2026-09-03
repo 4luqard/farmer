@@ -1064,42 +1064,66 @@ def _apply_market_order(state, farm, private, order):
 
 
 def _day_refresh(farm):
-    """Update animal condition for a new day at the day-rollover boundary.
+    """Update plant/animal condition for a new day at the day-rollover boundary.
 
     Args:
         farm: The acting player's farm dict, mutated in place; "tiles" is
-            scanned for occupied COOP/PASTURE tiles.
+            scanned for PLANT and occupied COOP/PASTURE tiles.
 
     Returns:
-        None. Each occupied animal-structure tile is visited at most once,
-        keyed by id() (mirroring _clone_state's memo), since a test fixture's
-        aliased grid rows can otherwise repeat the same tile object across
-        several "rows". For each tile: pending_care_bonus banks +1 when both
-        fed_today and cared_today are true (python-kit/README.md L75-80);
-        consecutive_unfed resets to 0 when fed_today, or increments by 1
-        otherwise (python-kit/README.md L111-115, L320); fed_today and
+        None. Each tile is visited at most once, keyed by id() (mirroring
+        _clone_state's memo), since a test fixture's aliased grid rows can
+        otherwise repeat the same tile object across several "rows".
+
+        For an occupied animal-structure tile: pending_care_bonus banks +1
+        when both fed_today and cared_today are true (python-kit/README.md
+        L75-80); consecutive_unfed resets to 0 when fed_today, or increments
+        by 1 otherwise (python-kit/README.md L111-115, L320); fed_today and
         cared_today both reset to False for the new day (python-kit/README.md
         L243's fed/watered reset, extended to cared_today since CARE is
-        documented as once-per-day, L71). fertilizer_available's end-of-day
-        True-set, plant consecutive_unwatered, and the 2+ escape/weed-
-        conversion rule are all still deferred: no test yet exercises them.
+        documented as once-per-day, L71). If the incremented consecutive_unfed
+        reaches 2, the animal escapes: the tile is replaced with
+        _new_structure_tile(kind), resetting animal/fed/unfed/cared/
+        fertilizer/bonus to their just-built defaults (python-kit/README.md
+        "Watering / Animal Feed": "they escape and be unrecoverable").
+
+        For a PLANT tile: consecutive_unwatered resets to 0 when
+        watered_today, or increments by 1 otherwise; watered_today resets to
+        False either way. If the incremented consecutive_unwatered reaches 2,
+        the plant turns to a weed: the tile is replaced with {"kind": "WEED"}
+        (python-kit/README.md "Watering / Animal Feed": "left unwatered for
+        two consecutive days, at the end of the day they turn into a WEED").
+
+        fertilizer_available's end-of-day True-set and the post-max-lifespan
+        yield decay are still deferred: no test yet exercises them.
     """
     seen = set()
-    for row in farm.get("tiles") or []:
-        for tile in row:
-            if not isinstance(tile, dict) or tile.get("kind") not in _STRUCTURE_ANIMALS or tile.get("animal") is None:
-                continue
-            if id(tile) in seen:
+    tiles = farm.get("tiles") or []
+    for y, row in enumerate(tiles):
+        for x, tile in enumerate(row):
+            if not isinstance(tile, dict) or id(tile) in seen:
                 continue
             seen.add(id(tile))
-            if tile.get("fed_today") and tile.get("cared_today"):
-                tile["pending_care_bonus"] = tile.get("pending_care_bonus", 0) + 1
-            if tile.get("fed_today"):
-                tile["consecutive_unfed"] = 0
-            else:
-                tile["consecutive_unfed"] = tile.get("consecutive_unfed", 0) + 1
-            tile["fed_today"] = False
-            tile["cared_today"] = False
+            kind = tile.get("kind")
+            if kind in _STRUCTURE_ANIMALS and tile.get("animal") is not None:
+                if tile.get("fed_today") and tile.get("cared_today"):
+                    tile["pending_care_bonus"] = tile.get("pending_care_bonus", 0) + 1
+                if tile.get("fed_today"):
+                    tile["consecutive_unfed"] = 0
+                else:
+                    tile["consecutive_unfed"] = tile.get("consecutive_unfed", 0) + 1
+                tile["fed_today"] = False
+                tile["cared_today"] = False
+                if tile["consecutive_unfed"] >= 2:
+                    row[x] = _new_structure_tile(kind)
+            elif kind == "PLANT":
+                if tile.get("watered_today"):
+                    tile["consecutive_unwatered"] = 0
+                else:
+                    tile["consecutive_unwatered"] = tile.get("consecutive_unwatered", 0) + 1
+                tile["watered_today"] = False
+                if tile["consecutive_unwatered"] >= 2:
+                    row[x] = {"kind": "WEED"}
 
 
 def _unit_action(entry):
@@ -1198,14 +1222,13 @@ def _apply_action(obs, action_dict):
     HARVEST, DIG, DROP, FEED, COLLECT_FERTILIZER, PICKUP, PLACE, PLANT
     (gated by the all-or-nothing simultaneous-planting rule), and the market
     orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL, plus
-    a day-rollover's consecutive_unfed update (_day_refresh). Still
-    deferred, per the walking-skeleton approach: town consumption,
-    cross-player concurrent market processing (this function only ever
-    simulates the acting player's own turn), maxMarketOrdersPerTurn
+    day-rollover's animal-escaping/weed-conversion/consecutive-unfed updates
+    (_day_refresh). Still deferred, per the walking-skeleton approach: town
+    consumption, cross-player concurrent market processing (this function
+    only ever simulates the acting player's own turn), maxMarketOrdersPerTurn
     truncation, weed spawning, post-max-lifespan yield decay,
-    fertilizer_available's end-of-day True-set, animal-escaping/weed-
-    conversion at day rollover, and market "prices" refresh (BUY_PRODUCT/
-    SELL update "inventory" but leave "prices" stale).
+    fertilizer_available's end-of-day True-set, and market "prices" refresh
+    (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
