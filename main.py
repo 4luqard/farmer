@@ -670,22 +670,35 @@ def _day_refresh(farm):
             scanned for occupied COOP/PASTURE tiles.
 
     Returns:
-        None. Each occupied animal-structure tile's consecutive_unfed resets
-        to 0 when the animal was fed_today, or increments by 1 otherwise
-        (python-kit/README.md L111-115, L320). fed_today/watered_today's
-        reset-to-false and fertilizer_available's end-of-day True-set
-        (python-kit/README.md L243, L322), plant consecutive_unwatered, and
-        the 2+ escape/weed-conversion rule are all deferred: no test yet
-        exercises any of them, and resetting fed_today here would break
-        test_feed's fed=True expectation post-rollover.
+        None. Each occupied animal-structure tile is visited at most once,
+        keyed by id() (mirroring _clone_state's memo), since a test fixture's
+        aliased grid rows can otherwise repeat the same tile object across
+        several "rows". For each tile: pending_care_bonus banks +1 when both
+        fed_today and cared_today are true (python-kit/README.md L75-80);
+        consecutive_unfed resets to 0 when fed_today, or increments by 1
+        otherwise (python-kit/README.md L111-115, L320); fed_today and
+        cared_today both reset to False for the new day (python-kit/README.md
+        L243's fed/watered reset, extended to cared_today since CARE is
+        documented as once-per-day, L71). fertilizer_available's end-of-day
+        True-set, plant consecutive_unwatered, and the 2+ escape/weed-
+        conversion rule are all still deferred: no test yet exercises them.
     """
+    seen = set()
     for row in farm.get("tiles") or []:
         for tile in row:
-            if isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS and tile.get("animal") is not None:
-                if tile.get("fed_today"):
-                    tile["consecutive_unfed"] = 0
-                else:
-                    tile["consecutive_unfed"] = tile.get("consecutive_unfed", 0) + 1
+            if not isinstance(tile, dict) or tile.get("kind") not in _STRUCTURE_ANIMALS or tile.get("animal") is None:
+                continue
+            if id(tile) in seen:
+                continue
+            seen.add(id(tile))
+            if tile.get("fed_today") and tile.get("cared_today"):
+                tile["pending_care_bonus"] = tile.get("pending_care_bonus", 0) + 1
+            if tile.get("fed_today"):
+                tile["consecutive_unfed"] = 0
+            else:
+                tile["consecutive_unfed"] = tile.get("consecutive_unfed", 0) + 1
+            tile["fed_today"] = False
+            tile["cared_today"] = False
 
 
 def _apply_action(obs, action_dict):

@@ -361,7 +361,7 @@ def test_feed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=True, unfed=0)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0)
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 1}
 
     
@@ -401,10 +401,10 @@ def test_care():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=1)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, bonus=1)
 
     
-def test_care():
+def test_care_unfed():
     original_state = {
         "player": 0,
         "day": 1,
