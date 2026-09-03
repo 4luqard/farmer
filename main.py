@@ -587,6 +587,50 @@ def _move(pos, action):
     return [x, y]
 
 
+def _apply_plant(farm, private, pos, crop, day):
+    """Plant a seed on the tile a unit stands on, if the tile is empty.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place; "seeds" is
+            decremented.
+        pos: [x, y] board position of the acting unit, or None.
+        crop: The crop to plant, a key of private["seeds"].
+        day: The current in-game day, recorded as planted_day.
+
+    Returns:
+        None. No-op unless the tile is None (also correctly excludes
+        "LOCKED", which _tile_at never returns as None). Otherwise writes a
+        fresh PLANT tile: watered_today=False, consecutive_unwatered=1 (a
+        new seed's planting day itself counts as its first unwatered day,
+        python-kit/README.md "Watering / Animal Feed"), yield_units=0,
+        fertilized_until_day=-1, and max_lifespan_left set to
+        _MAX_YIELD_DAY[crop] + 1 for one-time crops (README: one-time crops
+        "reach max lifespan one day after max_yield_day") or -1 for ongoing
+        crops (TOMATO/STRAWBERRY, per the Observation Format schema).
+        Decrements private["seeds"][crop] by 1. The all-or-nothing rule for
+        multiple simultaneous PLANTs of the same crop ("if you try to plant
+        too many in a specific turn, none are planted", README "Plants") is
+        the caller's responsibility — _apply_action only calls this for
+        crops the pre-pass has determined are affordable this turn.
+    """
+    if _tile_at(farm, pos) is not None:
+        return
+    max_lifespan_left = _MAX_YIELD_DAY[crop] + 1 if crop in _ONE_TIME_CROPS else -1
+    _set_tile(farm, pos, {
+        "kind": "PLANT",
+        "crop": crop,
+        "planted_day": day,
+        "watered_today": False,
+        "consecutive_unwatered": 1,
+        "yield_units": 0,
+        "max_lifespan_left": max_lifespan_left,
+        "fertilized_until_day": -1,
+    })
+    seeds = private.setdefault("seeds", {})
+    seeds[crop] = seeds.get(crop, 0) - 1
+
+
 def _apply_tile_action(farm, pos, action, day):
     """Apply one unit's action to the tile it stands on, if it has an effect.
 
@@ -773,7 +817,36 @@ def _unit_action(entry):
     return entry[0] if len(entry) == 1 else entry
 
 
-def _apply_unit_action(farm, private, index, pos, action, day):
+def _plant_allowed_crops(seeds, farmer_action, hand_actions):
+    """Which crops may be planted this turn under the all-or-nothing rule.
+
+    python-kit/README.md, "Plants": "If you try to plant too many in a
+    specific turn, none are planted - ie if you have 1 melon seed, but two
+    units do the PLANT MELON command." This tallies demand per crop across
+    every unit's chosen action before any of them are applied.
+
+    Args:
+        seeds: private["seeds"], {crop: count} in stock.
+        farmer_action: The farmer's parsed action (_unit_action's result),
+            or None.
+        hand_actions: The hands' parsed actions (_unit_action's results),
+            one per hand, None where a hand has no action this turn.
+
+    Returns:
+        The set of crops for which every simultaneous PLANT this turn may
+        proceed: a crop is allowed only when seeds[crop] covers the total
+        number of units planting it this turn; a crop with insufficient
+        seed is entirely excluded, blocking all of its PLANTs this turn.
+    """
+    demand = {}
+    for action in [farmer_action] + list(hand_actions):
+        if isinstance(action, list) and len(action) == 2 and action[0] == "PLANT":
+            crop = action[1]
+            demand[crop] = demand.get(crop, 0) + 1
+    return {crop for crop, need in demand.items() if seeds.get(crop, 0) >= need}
+
+
+def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
     """Apply one unit's parsed action and return its post-action position.
 
     Args:
@@ -784,13 +857,24 @@ def _apply_unit_action(farm, private, index, pos, action, day):
         action: The unit's parsed action (_unit_action's result): a bare
             string, or a [verb, *args] list.
         day: The current in-game day.
+        plant_allowed: The set of crops this turn's PLANT actions may
+            proceed for (_plant_allowed_crops's result).
 
     Returns:
-        The unit's new [x, y] position (_move's result). Applies action via
-        the existing _apply_tile_action + _apply_shed_action pair.
+        The unit's new [x, y] position (_move's result — a no-op for PLANT,
+        which isn't a movement action). PLANT dispatches to _apply_plant
+        only when its crop is in plant_allowed; every other action falls
+        through to the existing _apply_tile_action + _apply_shed_action
+        pair.
     """
-    _apply_tile_action(farm, pos, action, day)
-    _apply_shed_action(private, index, action)
+    verb = action[0] if isinstance(action, list) else action
+    if verb == "PLANT":
+        crop = action[1]
+        if crop in plant_allowed:
+            _apply_plant(farm, private, pos, crop, day)
+    else:
+        _apply_tile_action(farm, pos, action, day)
+        _apply_shed_action(private, index, action)
     return _move(pos, action)
 
 
@@ -800,11 +884,12 @@ def _apply_action(obs, action_dict):
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Handles PASS, the four
     movement directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED,
-    COLLECT_FERTILIZER, plus a day-rollover's consecutive_unfed update
-    (_day_refresh). The rest of python-kit/README.md's "Turn Processing
-    Order" (market orders, the remainder of day refresh, price/income
-    updates, ...) is deferred to later tests, per the walking-skeleton
-    approach.
+    COLLECT_FERTILIZER and PLANT (gated by the all-or-nothing
+    simultaneous-planting rule), plus a day-rollover's consecutive_unfed
+    update (_day_refresh). The rest of python-kit/README.md's "Turn
+    Processing Order" (market orders, the remainder of day refresh,
+    price/income updates, ...) is deferred to later tests, per the
+    walking-skeleton approach.
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -826,16 +911,17 @@ def _apply_action(obs, action_dict):
 
     farmer_entry = action_dict.get("farmer") or []
     hand_entries = action_dict.get("hands") or []
+    farmer_action = _unit_action(farmer_entry) if farmer_entry else None
+    hand_actions = [_unit_action(entry) if entry else None for entry in hand_entries]
+    plant_allowed = _plant_allowed_crops(private.get("seeds", {}), farmer_action, hand_actions)
 
     if farmer_entry and farm.get("farmer") is not None:
-        farmer_action = _unit_action(farmer_entry)
-        farm["farmer"] = _apply_unit_action(farm, private, 0, farm["farmer"], farmer_action, day)
+        farm["farmer"] = _apply_unit_action(farm, private, 0, farm["farmer"], farmer_action, day, plant_allowed)
 
     hands = farm.get("hands", [])
-    for i, entry in enumerate(hand_entries):
-        if entry and i < len(hands):
-            hand_action = _unit_action(entry)
-            hands[i] = _apply_unit_action(farm, private, i + 1, hands[i], hand_action, day)
+    for i, hand_action in enumerate(hand_actions):
+        if hand_entries[i] and i < len(hands):
+            hands[i] = _apply_unit_action(farm, private, i + 1, hands[i], hand_action, day, plant_allowed)
 
     hour = state.get("hour", 0) + 1
     if hour >= _TURNS_PER_DAY:
