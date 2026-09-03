@@ -67,6 +67,33 @@ def _animal_tile(y, x, kind="COOP", animal=None, plcd_dy=-1,
     return tiles
 
 
+def _market():
+    """Prices and inventory of each thing in the market"""
+    prices = {
+        "WHEAT": 25,
+        "CARROT": 35,
+        "TOMATO": 60,
+        "STRAWBERRY": 120,
+        "MELON": 250,
+        "EGG": 50,
+        "MILK": 160,
+        "WOOL": 200,
+        "FERTILIZER": 100
+    }
+    inventory = {
+        "WHEAT": 10000,
+        "CARROT": 10000,
+        "TOMATO": 10000,
+        "STRAWBERRY": 10000,
+        "MELON": 10000,
+        "EGG": 10000,
+        "MILK": 10000,
+        "WOOL": 10000,
+        "FERTILIZER": 10000
+    }
+    return {"inventory": inventory, "prices": prices}
+
+
 def test_pass_action():
     original_state = {
         "player": 0,
@@ -114,7 +141,8 @@ def test_movement_actions():
         assert _apply_action(original_state, action_dict)['hour'] == 0
         assert _apply_action(original_state, action_dict)['farms'][0]['farmer'] == farmer_positions[i]
         assert _apply_action(original_state, action_dict)['farms'][0]['hands'] == hands_positions[i]
-    
+
+        
 def test_water():
     original_state = {
         "player": 0,
@@ -421,6 +449,322 @@ def test_care_unfed():
         'market': []
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0)
+
+    
+def test_plant_any_crop():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PLANT", "CARROT"]],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(2, 3, crop="CARROT", lifespan=4)
+    assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 1
+
+    
+def test_pickup():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PICKUP", "GOOSE", 2]],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2, "GOOSE": 2}
+    assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 1
+
+    
+def test_place_on_coop_and_shed():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(4, 4), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PLACE", "GOOSE", 1]],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
+    assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 3
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(4, 4, animal="GOOSE")
+
+    
+def test_place_on_shed():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _animal_tile(2, 3), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PLACE", "GOOSE", 1]],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
+    assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 4
+
+    
+def test_multiple_action_at_the_same_time():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PLACE", "GOOSE", 1]],
+        'hands': [['PLANT', 'CARROT']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
+    assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 4
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(4, 1, crop="CARROT", lifespan=4)
+    assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 1
+
+    
+def test_multiple_same_action_at_the_same_time():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': [["PLANT", "CARROT"]],
+        'hands': [['PLANT', 'CARROT']],
+        'market': []
+    }
+    after_actions_farm_tiles = _plant_tile(4, 4, crop="CARROT", lifespan=4)
+    after_actions_farm_tiles[4][1] = {
+        "kind": "PLANT",
+        "crop": "CARROT",
+        "planted_day": 0,
+        "watered_today": False,
+        "consecutive_unwatered": 1,
+        "yield_units": 0,
+        "max_lifespan_left": 4,
+        "fertilized_until_day": -1
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == after_actions_farm_tiles
+    assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 0
+
+    
+def test_multiple_same_action_at_the_same_time_without_enough_resources():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': [["PLANT", "CARROT"]],
+        'hands': [['PLANT', 'CARROT']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _farm_tiles(['NW'])
+    assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 1
+
+    
+def test_hire():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["HIRE"]]
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['hires_today'] == 2
+    assert _apply_action(original_state, action_dict)['farms'][0]['hands'][1] == [5, 4]
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2699
+
+    
+def test_buy_land():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["BUY_LAND"]]
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _farm_tiles(['NW', 'NE'])
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 1700
+
+    
+def test_buy_seed():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["BUY_SEED", "CARROT", 1]]
+    }
+    assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 2
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2680
+
+    
+def test_buy_product():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": _market(),
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["BUY_PRODUCT", "WHEAT", 1]]
+    }
+    assert _apply_action(original_state, action_dict)['private']['shed']['WHEAT'] == 1
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2674
+
+    
+def test_buy_animal():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {'shed': {"GOOSE": 3}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["BUY_ANIMAL", "GOOSE", 1]]
+    }
+    assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 4
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2400
+
+
+def test_sell():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 3,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": _market(),
+        "private": {'shed': {"WHEAT": 4}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': [["SELL", "WHEAT", 1]]
+    }
+    assert _apply_action(original_state, action_dict)['private']['shed']['WHEAT'] == 3
+    assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2725
+
+        
+def test_plant_turning_to_weed():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, watered=False, unwatered=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _weed_tile(2, 3)
+
+
+def test_animal_escaping():
+    original_state = {
+        "player": 0,
+        "day": 1,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['PASS'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3)
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
 
     
 if __name__ == "__main__":
