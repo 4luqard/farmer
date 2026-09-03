@@ -832,6 +832,237 @@ def _apply_shed_action(private, index, action):
                 shed.pop(item, None)
 
 
+def _hire_spawn(farm):
+    """Pick the spawn position for a newly-hired hand.
+
+    python-kit/README.md, "Hiring": "A hired hand appears orthogonally
+    adjacent to the shed in a free space following NWSE. If there are not
+    open spaces, it looks for the one with the least occupants, breaking
+    ties by NWSE preference." Both rules collapse into one: pick the
+    shed-adjacent cell with the fewest current occupants, ties broken by
+    NWSE order — a free cell simply has an occupant count of 0.
+
+    Args:
+        farm: The acting player's farm dict; "farmer" and "hands" are read.
+
+    Returns:
+        A new [x, y], one of (4,4)/(5,4)/(4,5)/(5,5) (NW/NE/SW/SE), chosen
+        as above. Spawn placement ignores whether the cell's quadrant is
+        locked (README.md): a hand can spawn on a locked tile and walk off
+        it later.
+    """
+    order = [(4, 4), (5, 4), (4, 5), (5, 5)]
+    occupants = [tuple(p) for p in [farm.get("farmer")] + list(farm.get("hands") or []) if p is not None]
+    counts = [occupants.count(cell) for cell in order]
+    return list(order[min(range(len(order)), key=lambda i: counts[i])])
+
+
+def _apply_hire(farm):
+    """Apply a HIRE market order.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+
+    Returns:
+        None. Appends a new hand to farm["hands"] at _hire_spawn's chosen
+        position, deducts _hire_cost(hires_today) from money (priced
+        before incrementing, since the cost is for "the number of hires
+        already made today" — python-kit/README.md "Hiring"), then
+        increments hires_today.
+    """
+    cost = _hire_cost(farm.get("hires_today", 0))
+    spawn = _hire_spawn(farm)
+    farm.setdefault("hands", []).append(spawn)
+    farm["money"] = farm.get("money", 0) - cost
+    farm["hires_today"] = farm.get("hires_today", 0) + 1
+
+
+def _apply_buy_land(farm):
+    """Apply a BUY_LAND market order.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+
+    Returns:
+        None. No-op once every quadrant is already unlocked. Otherwise
+        unlocks the next quadrant in fixed order NW -> NE -> SW -> SE
+        (python-kit/AGENTS.md: "the other three (NE, SW, SE) can be bought
+        via BUY_LAND for $1k / $2k / $4k respectively") by appending its
+        name to unlocked_quadrants and clearing every "LOCKED" tile in that
+        quadrant's 5x5 block to None, then deducts
+        _land_cost(unlocked-before-this-call) from money.
+    """
+    unlocked = farm.get("unlocked_quadrants") or []
+    cost = _land_cost(unlocked)
+    if cost is None:
+        return
+    next_quadrant = _QUADRANT_ORDER[len(set(unlocked))]
+    farm.setdefault("unlocked_quadrants", []).append(next_quadrant)
+    farm["money"] = farm.get("money", 0) - cost
+    x0 = 5 if "E" in next_quadrant else 0
+    y0 = 5 if next_quadrant.startswith("S") else 0
+    tiles = farm.get("tiles") or []
+    for y in range(y0, min(y0 + 5, len(tiles))):
+        row = tiles[y]
+        for x in range(x0, min(x0 + 5, len(row))):
+            if row[x] == "LOCKED":
+                row[x] = None
+
+
+def _apply_buy_seed(farm, private, crop, n):
+    """Apply a BUY_SEED market order: fixed price, unlimited supply.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place; "seeds" is
+            credited.
+        crop: The crop to buy, a key of _SEED_COSTS.
+        n: How many seeds to buy.
+
+    Returns:
+        None. Credits private["seeds"][crop] by n and deducts
+        _SEED_COSTS[crop] * n from money.
+    """
+    seeds = private.setdefault("seeds", {})
+    seeds[crop] = seeds.get(crop, 0) + n
+    farm["money"] = farm.get("money", 0) - _SEED_COSTS[crop] * n
+
+
+def _apply_buy_animal(farm, private, animal, n):
+    """Apply a BUY_ANIMAL market order: fixed price, unlimited supply.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place; "shed" is
+            credited.
+        animal: The animal to buy, a key of _ANIMAL_COSTS.
+        n: How many animals to buy.
+
+    Returns:
+        None. Bought animals go straight to private["shed"][animal]
+        (credited by n), and _ANIMAL_COSTS[animal] * n is deducted from
+        money.
+    """
+    shed = private.setdefault("shed", {})
+    shed[animal] = shed.get(animal, 0) + n
+    farm["money"] = farm.get("money", 0) - _ANIMAL_COSTS[animal] * n
+
+
+def _apply_buy_product(state, farm, private, item, n):
+    """Apply a BUY_PRODUCT market order: dynamic price, drains market inventory.
+
+    Args:
+        state: The forward-simulated state, mutated in place;
+            state["market"]["inventory"] is read/written.
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place; "shed" is
+            credited.
+        item: The product to buy ("WHEAT" or "FERTILIZER" — the only two
+            products BUY_PRODUCT supports, python-kit/README.md "Buying
+            inventory from the market").
+        n: How many units to buy.
+
+    Returns:
+        None. Buys up to n units one at a time (python-kit/README.md:
+        orders are "processed... one unit at a time"), each priced by
+        _price at that unit's post-buy inventory, stopping early once
+        money runs out ("If a player runs out of money mid-order, the
+        order is stopped"). Each bought unit credits private["shed"][item]
+        by 1, deducts its price from money, and decrements
+        state["market"]["inventory"][item] by 1 (documented as drained by
+        BUY_PRODUCT orders). state["market"]["prices"] is left stale —
+        untested, deferred.
+    """
+    inventory = state.setdefault("market", {}).setdefault("inventory", {})
+    shed = private.setdefault("shed", {})
+    for _ in range(n):
+        inv = inventory.get(item, _MARKET_I0) - 1
+        price = _price(item, inv)
+        if farm.get("money", 0) < price:
+            break
+        farm["money"] = farm.get("money", 0) - price
+        inventory[item] = inv
+        shed[item] = shed.get(item, 0) + 1
+
+
+def _apply_sell(state, farm, private, item, n):
+    """Apply a SELL market order: dynamic price, grows market inventory.
+
+    Args:
+        state: The forward-simulated state, mutated in place;
+            state["market"]["inventory"] is read/written.
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place; "shed" is
+            debited.
+        item: The product to sell; any resource in _MARKET_PARAMS
+            (python-kit/README.md: "every product, including fertilizer
+            collected from animals, can be sold via SELL").
+        n: How many units to sell.
+
+    Returns:
+        None. Sells up to n units from private["shed"][item] one at a time,
+        stopping early once the shed runs out. Each unit is priced by
+        _price at that unit's pre-sell inventory ("the sell price is
+        quoted at the pre-sell inventory"), credits the price to money, and
+        debits the shed by 1, deleting the key at 0. Grows
+        state["market"]["inventory"][item] by 1 per unit sold, except when
+        the price has been driven to the $1 floor: "the unit is still
+        purchased but is not added to market inventory, so the floor
+        remains responsive to subsequent buys."
+    """
+    inventory = state.setdefault("market", {}).setdefault("inventory", {})
+    shed = private.setdefault("shed", {})
+    for _ in range(n):
+        have = shed.get(item, 0)
+        if have <= 0:
+            break
+        inv = inventory.get(item, _MARKET_I0)
+        price = _price(item, inv)
+        left = have - 1
+        if left > 0:
+            shed[item] = left
+        else:
+            shed.pop(item, None)
+        farm["money"] = farm.get("money", 0) + price
+        if price > _PRICE_FLOOR:
+            inventory[item] = inv + 1
+
+
+def _apply_market_order(state, farm, private, order):
+    """Dispatch one market order from action_dict["market"] to its handler.
+
+    Args:
+        state: The forward-simulated state, mutated in place.
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place.
+        order: One market order, e.g. ["HIRE"], ["BUY_SEED", "CARROT", 1].
+
+    Returns:
+        None. Dispatches by order[0] to _apply_hire, _apply_buy_land,
+        _apply_buy_seed, _apply_buy_animal, _apply_buy_product or
+        _apply_sell, defaulting a missing quantity argument to 1. Every
+        other or malformed order is a no-op — no precondition (affordability,
+        land already fully bought, etc.) is re-validated here, matching
+        _apply_shed_action's existing convention that _possible_actions is
+        solely responsible for offering only legal orders.
+    """
+    if not order:
+        return
+    verb, args = order[0], order[1:]
+    if verb == "HIRE":
+        _apply_hire(farm)
+    elif verb == "BUY_LAND":
+        _apply_buy_land(farm)
+    elif verb == "BUY_SEED" and args:
+        _apply_buy_seed(farm, private, args[0], args[1] if len(args) > 1 else 1)
+    elif verb == "BUY_ANIMAL" and args:
+        _apply_buy_animal(farm, private, args[0], args[1] if len(args) > 1 else 1)
+    elif verb == "BUY_PRODUCT" and args:
+        _apply_buy_product(state, farm, private, args[0], args[1] if len(args) > 1 else 1)
+    elif verb == "SELL" and args:
+        _apply_sell(state, farm, private, args[0], args[1] if len(args) > 1 else 1)
+
+
 def _day_refresh(farm):
     """Update animal condition for a new day at the day-rollover boundary.
 
@@ -962,14 +1193,19 @@ def _apply_action(obs, action_dict):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
-    hired hand, then advances the turn clock. Handles PASS, the four
-    movement directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED,
-    COLLECT_FERTILIZER, PICKUP, PLACE and PLANT (gated by the all-or-nothing
-    simultaneous-planting rule), plus a day-rollover's consecutive_unfed
-    update (_day_refresh). The rest of python-kit/README.md's "Turn
-    Processing Order" (market orders, the remainder of day refresh,
-    price/income updates, ...) is deferred to later tests, per the
-    walking-skeleton approach.
+    hired hand, then this turn's market orders, then advances the turn
+    clock. Handles PASS, the four movement directions, WATER, FERTILIZE,
+    HARVEST, DIG, DROP, FEED, COLLECT_FERTILIZER, PICKUP, PLACE, PLANT
+    (gated by the all-or-nothing simultaneous-planting rule), and the market
+    orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL, plus
+    a day-rollover's consecutive_unfed update (_day_refresh). Still
+    deferred, per the walking-skeleton approach: town consumption,
+    cross-player concurrent market processing (this function only ever
+    simulates the acting player's own turn), maxMarketOrdersPerTurn
+    truncation, weed spawning, post-max-lifespan yield decay,
+    fertilizer_available's end-of-day True-set, animal-escaping/weed-
+    conversion at day rollover, and market "prices" refresh (BUY_PRODUCT/
+    SELL update "inventory" but leave "prices" stale).
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -1002,6 +1238,9 @@ def _apply_action(obs, action_dict):
     for i, hand_action in enumerate(hand_actions):
         if hand_entries[i] and i < len(hands):
             hands[i] = _apply_unit_action(farm, private, i + 1, hands[i], hand_action, day, plant_allowed)
+
+    for order in action_dict.get("market") or []:
+        _apply_market_order(state, farm, private, order)
 
     hour = state.get("hour", 0) + 1
     if hour >= _TURNS_PER_DAY:
