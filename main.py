@@ -631,6 +631,65 @@ def _apply_plant(farm, private, pos, crop, day):
     seeds[crop] = seeds.get(crop, 0) - 1
 
 
+def _apply_place(farm, private, index, pos, item, n):
+    """Apply one unit's PLACE action, if it has an effect.
+
+    python-kit/README.md, "Animals": PLACE has two mutually exclusive
+    variants, chosen by what the unit stands on — this needs both farm (to
+    check the tile) and private (to mutate inventory) together, which
+    neither _apply_tile_action nor _apply_shed_action alone can resolve, so
+    it gets its own dedicated function.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place;
+            "inventories" and "shed" are read/written.
+        index: Which unit is acting: 0 for the farmer, i + 1 for hand i.
+        pos: [x, y] board position of the acting unit, or None.
+        item: The item being placed.
+        n: How many of item to move into the shed (ignored for the
+            animal-placement variant, which always places exactly 1).
+
+    Returns:
+        None. If the unit stands on an unoccupied COOP/PASTURE that item
+        matches (GOOSE on a COOP, COW/SHEEP on a PASTURE) and the unit
+        carries at least 1: sets tile["animal"] = item ("n" ignored,
+        "standing on a matching unoccupied structure ... places one animal
+        from inventory onto the tile") and decrements the unit's inventory
+        by 1, deleting the key at 0. placed_day is left untouched, matching
+        _new_structure_tile's existing deferral — no test exercises it yet.
+        Otherwise (shed-drop variant): moves up to n of item from the
+        unit's inventory into private["shed"] (created if absent), capped
+        by the shed's remaining room under _SHED_CAPACITY same as DROP,
+        deleting the inventory key at 0. Shed-adjacency is not re-checked
+        here, matching _apply_shed_action's existing convention: only a
+        unit _possible_actions already deemed shed-adjacent is ever offered
+        this variant.
+    """
+    inventories = private.get("inventories")
+    if not inventories or index >= len(inventories):
+        return
+    inventory = inventories[index]
+    tile = _tile_at(farm, pos)
+    if (isinstance(tile, dict) and tile.get("kind") in _STRUCTURE_ANIMALS
+            and tile.get("animal") is None and item in _STRUCTURE_ANIMALS[tile["kind"]]
+            and inventory.get(item, 0) > 0):
+        tile["animal"] = item
+        moved = 1
+    else:
+        shed = private.setdefault("shed", {})
+        room = _SHED_CAPACITY - sum(shed.values())
+        moved = max(0, min(n, inventory.get(item, 0), room))
+        if moved:
+            shed[item] = shed.get(item, 0) + moved
+    if moved:
+        left = inventory.get(item, 0) - moved
+        if left > 0:
+            inventory[item] = left
+        else:
+            inventory.pop(item, None)
+
+
 def _apply_tile_action(farm, pos, action, day):
     """Apply one unit's action to the tile it stands on, if it has an effect.
 
@@ -661,11 +720,11 @@ def _apply_tile_action(farm, pos, action, day):
         cared_today for the day; the yield bonus it banks is applied
         separately by _day_refresh, at end of day. On an empty tile:
         "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-placed COOP/PASTURE
-        tile (_new_structure_tile). Planting a seed (_apply_plant) is
-        handled by its own dedicated function instead of here, since it
-        needs private inventory access this function doesn't have. Every
-        other tile-kind/action combination is deferred to later tests, per
-        the walking-skeleton approach.
+        tile (_new_structure_tile). Planting a seed (_apply_plant) and
+        PLACE (_apply_place) are handled by their own dedicated functions
+        instead of here, since both need private inventory access this
+        function doesn't have. Every other tile-kind/action combination is
+        deferred to later tests, per the walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
     if tile is None:
@@ -861,14 +920,18 @@ def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
             proceed for (_plant_allowed_crops's result).
 
     Returns:
-        The unit's new [x, y] position (_move's result — a no-op for PLANT,
-        which isn't a movement action). PLANT dispatches to _apply_plant
-        only when its crop is in plant_allowed; every other action falls
-        through to the existing _apply_tile_action + _apply_shed_action
-        pair.
+        The unit's new [x, y] position (_move's result — a no-op for
+        PLACE/PLANT, which aren't movement actions). PLACE dispatches to
+        _apply_place; PLANT dispatches to _apply_plant only when its crop
+        is in plant_allowed; every other action falls through to the
+        existing _apply_tile_action + _apply_shed_action pair.
     """
     verb = action[0] if isinstance(action, list) else action
-    if verb == "PLANT":
+    if verb == "PLACE":
+        item = action[1]
+        n = action[2] if len(action) > 2 else 1
+        _apply_place(farm, private, index, pos, item, n)
+    elif verb == "PLANT":
         crop = action[1]
         if crop in plant_allowed:
             _apply_plant(farm, private, pos, crop, day)
@@ -884,7 +947,7 @@ def _apply_action(obs, action_dict):
     Applies this step's chosen action to the acting player's farmer and each
     hired hand, then advances the turn clock. Handles PASS, the four
     movement directions, WATER, FERTILIZE, HARVEST, DIG, DROP, FEED,
-    COLLECT_FERTILIZER and PLANT (gated by the all-or-nothing
+    COLLECT_FERTILIZER, PLACE and PLANT (gated by the all-or-nothing
     simultaneous-planting rule), plus a day-rollover's consecutive_unfed
     update (_day_refresh). The rest of python-kit/README.md's "Turn
     Processing Order" (market orders, the remainder of day refresh,
