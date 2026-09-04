@@ -2,7 +2,7 @@
 import math
 import random
 
-__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal", "_apply_action"]
+__all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal", "_apply_action", "_get_reward"]
 
 
 # ---- Farmer agent ----
@@ -1413,3 +1413,23 @@ def _apply_action(obs, action_dict, weeds_enabled=True, seed=None):
     state["hour"] = hour
 
     return state
+
+
+def _get_reward(state):
+    """Score a terminal state from the acting player's perspective.
+
+    Args:
+        state: The observation dict for the current turn; reads "player" and
+            (via _is_terminal) "day"/"hour", plus each farm's "money".
+
+    Returns:
+        The acting player's money minus the opponent's, once the season has
+        ended (_is_terminal(state) is True); 0 while the game is ongoing,
+        since python-kit/README.md L248-254 only scores the final tally.
+    """
+    if not _is_terminal(state):
+        return 0
+    farms = state.get("farms", [])
+    player = state.get("player", 0)
+    opponent = 1 - player
+    return farms[player].get("money", 0) - farms[opponent].get("money", 0)
