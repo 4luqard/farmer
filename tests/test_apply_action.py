@@ -869,5 +869,24 @@ def test_plant_turning_to_weed_by_decay():
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _weed_tile(2, 3)
 
 
+def test_fertilizer_appearing():
+    original_state = {
+        "player": 0,
+        "day": 0,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"inventories": [{"WHEAT": 2}, {}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ['PASS'],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, fertilizer=True)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

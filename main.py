@@ -1177,6 +1177,12 @@ def _day_refresh(farm):
         _new_structure_tile(kind), resetting animal/fed/unfed/cared/
         fertilizer/bonus to their just-built defaults (python-kit/README.md
         "Watering / Animal Feed": "they escape and be unrecoverable").
+        Otherwise, the animal survives the day and fertilizer_available is
+        set True unconditionally — "every surviving animal makes 1
+        available at the end of each day, whether or not it was fed or
+        cared for" (python-kit/README.md L70); uncollected fertilizer
+        doesn't accumulate, so setting an already-True flag again is a
+        harmless no-op (L70: "does not accumulate").
 
         For a PLANT tile: consecutive_unwatered resets to 0 when
         watered_today, or increments by 1 otherwise; watered_today resets to
@@ -1184,9 +1190,6 @@ def _day_refresh(farm):
         the plant turns to a weed: the tile is replaced with {"kind": "WEED"}
         (python-kit/README.md "Watering / Animal Feed": "left unwatered for
         two consecutive days, at the end of the day they turn into a WEED").
-
-        fertilizer_available's end-of-day True-set and the post-max-lifespan
-        yield decay are still deferred: no test yet exercises them.
     """
     seen = set()
     tiles = farm.get("tiles") or []
@@ -1207,6 +1210,8 @@ def _day_refresh(farm):
                 tile["cared_today"] = False
                 if tile["consecutive_unfed"] >= 2:
                     row[x] = _new_structure_tile(kind)
+                else:
+                    tile["fertilizer_available"] = True
             elif kind == "PLANT":
                 if tile.get("watered_today"):
                     tile["consecutive_unwatered"] = 0
@@ -1317,12 +1322,12 @@ def _apply_action(obs, action_dict):
     README.md L94/L354), the town center's and every unlocked town shop's
     market-inventory drain (_apply_town_consumption), one-time crops' post-
     max-lifespan yield decay (_apply_decay), plus day-rollover's animal-
-    escaping/weed-conversion/consecutive-unfed updates (_day_refresh). Still
-    deferred, per the walking-skeleton approach: cross-player concurrent
-    market processing (this function only ever simulates the acting
-    player's own turn), weed spawning, ongoing crops' production-count-based
-    decay, fertilizer_available's end-of-day True-set, and market "prices"
-    refresh (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
+    escaping/weed-conversion/consecutive-unfed/fertilizer_available updates
+    (_day_refresh). Still deferred, per the walking-skeleton approach:
+    cross-player concurrent market processing (this function only ever
+    simulates the acting player's own turn), weed spawning, ongoing crops'
+    production-count-based decay, and market "prices" refresh (BUY_PRODUCT/
+    SELL update "inventory" but leave "prices" stale).
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
