@@ -817,5 +817,38 @@ def test_town_consumption():
     }
 
 
+def test_town_shop_consumption():
+    original_state = {
+        "player": 0,
+        "day": 4,
+        "hour": 1,
+        "farms": [
+            {"money": 2700, "hires_today": 1, "farmer": [4, 4], "hands": [[1, 4]], "tiles": _farm_tiles(['NW']), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _animal_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "market": _market(),
+        "town": {
+            "unlocked_shops": ["BAKERY"]
+        },
+        "private": {'shed': {"WHEAT": 4}, "inventories": [{"WHEAT": 2, "GOOSE": 1}, {}], "seeds": {"CARROT": 1}}
+    }
+    action_dict = {
+        'farmer': ["PASS"],
+        'hands': [["PASS"]],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict)['market']['inventory'] == {
+        "WHEAT": 9999,
+        "CARROT": 10000,
+        "TOMATO": 10000,
+        "STRAWBERRY": 10000,
+        "MELON": 10000,
+        "EGG": 9999,
+        "MILK": 10000,
+        "WOOL": 10000,
+        "FERTILIZER": 10000
+    }
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

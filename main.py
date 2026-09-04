@@ -512,6 +512,17 @@ _TURNS_PER_DAY = 24  # python-kit/README.md L355
 _EPISODE_STEPS = 720  # python-kit/README.md L351
 _MAX_MARKET_ORDERS_PER_TURN = 10  # python-kit/README.md L354
 _TOWN_CENTER_SELL_INTERVAL = 24  # python-kit/README.md L360
+_TOWN_SHOP_SELL_INTERVAL = 4  # python-kit/README.md L359
+_SHOP_DEMAND = {  # python-kit/README.md Town Buildings table L175-184; only "BAKERY" has a confirmed observation spelling
+    "BAKERY":         {"EGG": 1, "WHEAT": 1},
+    "PIZZA_SHOP":     {"MILK": 1, "TOMATO": 1, "WHEAT": 1},
+    "BRUNCH_SPOT":    {"EGG": 1, "WHEAT": 1, "STRAWBERRY": 1},
+    "YARN_STORE":     {"WOOL": 2},
+    "ICE_CREAM_SHOP": {"STRAWBERRY": 1, "MILK": 1, "WHEAT": 1},
+    "PET_CAFE":       {"CARROT": 2},
+    "SMOOTHIE_SHOP":  {"STRAWBERRY": 1, "MILK": 1},
+    "FARMERS_MARKET": {"WHEAT": 1, "CARROT": 1, "TOMATO": 1, "STRAWBERRY": 1},
+}
 
 
 def _clone_state(obs, memo=None):
@@ -1079,13 +1090,26 @@ def _apply_town_consumption(state, hour, day):
         of market inventory whenever hour is a multiple of
         _TOWN_CENTER_SELL_INTERVAL (i.e. once per day, at hour 0) — the town
         center "consumes one of every product (excluding fertilizer)"
-        (python-kit/README.md L173), a flat rate that "does not ramp".
+        (python-kit/README.md L173), a flat rate that "does not ramp". Each
+        shop name in state["town"]["unlocked_shops"] (duplicates consume
+        independently, python-kit/README.md L169-171) drains its own
+        _SHOP_DEMAND items whenever the absolute turn count is 1 modulo
+        _TOWN_SHOP_SELL_INTERVAL — an offset from the town center's own
+        modulo-24 tick chosen to match tests/test_apply_action.py's
+        test_town_shop_consumption (turn 97 = day 4 hour 1); only inferred
+        from that one case, not stated explicitly in python-kit/README.md,
+        which merely says shops consume "every townShopSellInterval turns".
     """
     inventory = state.setdefault("market", {}).setdefault("inventory", {})
     if hour % _TOWN_CENTER_SELL_INTERVAL == 0:
         for item in _MARKET_PARAMS:
             if item != "FERTILIZER":
                 inventory[item] = inventory.get(item, _MARKET_I0) - 1
+    turn = day * _TURNS_PER_DAY + hour
+    if turn % _TOWN_SHOP_SELL_INTERVAL == 1:
+        for shop in state.get("town", {}).get("unlocked_shops", []):
+            for item, count in _SHOP_DEMAND.get(shop, {}).items():
+                inventory[item] = inventory.get(item, _MARKET_I0) - count
 
 
 def _day_refresh(farm):
@@ -1248,10 +1272,10 @@ def _apply_action(obs, action_dict):
     (gated by the all-or-nothing simultaneous-planting rule), and the market
     orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL (capped
     at _MAX_MARKET_ORDERS_PER_TURN, extras silently dropped per python-kit/
-    README.md L94/L354), the town center's daily market-inventory drain
-    (_apply_town_consumption), plus day-rollover's animal-escaping/weed-
-    conversion/consecutive-unfed updates (_day_refresh). Still deferred, per
-    the walking-skeleton approach: town shop consumption, cross-player
+    README.md L94/L354), the town center's and every unlocked town shop's
+    market-inventory drain (_apply_town_consumption), plus day-rollover's
+    animal-escaping/weed-conversion/consecutive-unfed updates (_day_refresh).
+    Still deferred, per the walking-skeleton approach: cross-player
     concurrent market processing (this function only ever simulates the
     acting player's own turn), weed spawning, post-max-lifespan yield decay,
     fertilizer_available's end-of-day True-set, and market "prices" refresh
