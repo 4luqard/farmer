@@ -368,8 +368,8 @@ def test_feed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, fertilizer=True)
-    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 1}
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, fertilizer=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {"WHEAT": 1}
 
     
 def test_collect_fertilizer():
@@ -408,7 +408,7 @@ def test_care():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, bonus=1, fertilizer=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, bonus=1, fertilizer=True)
 
     
 def test_care_unfed():
@@ -427,7 +427,7 @@ def test_care_unfed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0, fertilizer=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0, fertilizer=True)
 
     
 def test_plant_any_crop():
@@ -723,7 +723,7 @@ def test_plant_turning_to_weed_by_not_watering():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _weed_tile(2, 3)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _weed_tile(2, 3)
 
 
 def test_animal_escaping():
@@ -742,8 +742,8 @@ def test_animal_escaping():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3)
-    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {"WHEAT": 2}
 
 
 def test_order_count_truncation():
@@ -864,7 +864,7 @@ def test_fertilizer_appearing():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, fertilizer=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, fertilizer=True)
 
 
 def test_random_weed_spawn_chance():
@@ -883,7 +883,7 @@ def test_random_weed_spawn_chance():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _weed_tile(1, 2)
+    assert _apply_action(original_state, action_dict, seed=156)['farms'][0]['tiles'] == _weed_tile(1, 2)
 
 
 if __name__ == "__main__":
