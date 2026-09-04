@@ -1156,12 +1156,23 @@ def _apply_town_consumption(state, hour, day):
                 inventory[item] = inventory.get(item, _MARKET_I0) - count
 
 
-def _day_refresh(farm):
+def _day_refresh(farm, weeds_enabled=True, seed=None):
     """Update plant/animal condition for a new day at the day-rollover boundary.
 
     Args:
         farm: The acting player's farm dict, mutated in place; "tiles" is
             scanned for PLANT and occupied COOP/PASTURE tiles.
+        weeds_enabled: Test/implementation-controllability switch, not a
+            gameplay parameter — python-kit/README.md's weed-spawn rule
+            (L357) is unconditional. When False, skips the per-empty-tile
+            random weed-spawn roll below entirely, leaving every other rule
+            in this function (animal escape/fertilizer, plant-to-weed decay)
+            untouched. Defaults to True so existing callers see no change.
+        seed: Test/implementation-controllability switch, not a gameplay
+            parameter. When not None, the per-empty-tile weed-spawn rolls
+            are drawn from a local random.Random(seed) instance instead of
+            the global random module, giving a caller a reproducible roll
+            sequence. Defaults to None, which preserves today's behavior.
 
     Returns:
         None. Each tile is visited at most once, keyed by id() (mirroring
@@ -1193,15 +1204,17 @@ def _day_refresh(farm):
         (python-kit/README.md "Watering / Animal Feed": "left unwatered for
         two consecutive days, at the end of the day they turn into a WEED").
 
-        Separately, every empty (None) tile has an independent
-        _WEED_SPAWN_CHANCE probability of spawning a weed this rollover
-        ("every empty unlocked tile has a weedSpawnChance ... of spawning a
-        weed at end-of-day", python-kit/README.md L357/AGENTS.md L19) — a
-        genuine, unseeded random.random() roll per the user's instruction,
-        not a deterministic formula. This makes
-        tests/test_apply_action.py's test_random_weed_spawn_chance
-        inherently flaky: it hard-codes one exact resulting weed tile, which
-        this roll will only reproduce by chance.
+        Separately, unless weeds_enabled is False, every empty (None) tile
+        has an independent _WEED_SPAWN_CHANCE probability of spawning a
+        weed this rollover ("every empty unlocked tile has a
+        weedSpawnChance ... of spawning a weed at end-of-day",
+        python-kit/README.md L357/AGENTS.md L19) — a genuine random.random()
+        roll per the user's instruction, not a deterministic formula, drawn
+        from random.Random(seed) when seed is given or else from the global
+        random module. This makes tests/test_apply_action.py's
+        test_random_weed_spawn_chance inherently flaky unless it fixes a
+        seed; it hard-codes one exact resulting weed tile, which an
+        unseeded roll will only reproduce by chance.
     """
     seen = set()
     tiles = farm.get("tiles") or []
@@ -1232,10 +1245,12 @@ def _day_refresh(farm):
                 tile["watered_today"] = False
                 if tile["consecutive_unwatered"] >= 2:
                     row[x] = {"kind": "WEED"}
-    for row in tiles:
-        for x, tile in enumerate(row):
-            if tile is None and random.random() < _WEED_SPAWN_CHANCE:
-                row[x] = {"kind": "WEED"}
+    if weeds_enabled:
+        rng = random.Random(seed) if seed is not None else random
+        for row in tiles:
+            for x, tile in enumerate(row):
+                if tile is None and rng.random() < _WEED_SPAWN_CHANCE:
+                    row[x] = {"kind": "WEED"}
 
 
 def _unit_action(entry):
@@ -1325,7 +1340,7 @@ def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
     return _move(pos, action)
 
 
-def _apply_action(obs, action_dict):
+def _apply_action(obs, action_dict, weeds_enabled=True, seed=None):
     """Advance one player's forward-simulated turn by one hour.
 
     Applies this step's chosen action to the acting player's farmer and each
@@ -1349,6 +1364,12 @@ def _apply_action(obs, action_dict):
         obs: The observation dict for the current turn; left unchanged.
         action_dict: {"farmer": [...], "hands": [[...], ...], "market": [...]},
             each unit list holding its one chosen action for this turn.
+        weeds_enabled: Forwarded to _day_refresh's same-named parameter;
+            test/implementation-controllability only, not a gameplay
+            parameter — defaults to True (today's behavior unchanged).
+        seed: Forwarded to _day_refresh's same-named parameter;
+            test/implementation-controllability only, not a gameplay
+            parameter — defaults to None (today's behavior unchanged).
 
     Returns:
         A new state, mutated per the actions described above, with "hour"
@@ -1388,7 +1409,7 @@ def _apply_action(obs, action_dict):
     if hour >= _TURNS_PER_DAY:
         hour = 0
         state["day"] = state.get("day", 0) + 1
-        _day_refresh(farm)
+        _day_refresh(farm, weeds_enabled=weeds_enabled, seed=seed)
     state["hour"] = hour
 
     return state
