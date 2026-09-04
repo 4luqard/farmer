@@ -511,6 +511,7 @@ def _possible_actions(obs) -> dict:
 _TURNS_PER_DAY = 24  # python-kit/README.md L355
 _EPISODE_STEPS = 720  # python-kit/README.md L351
 _MAX_MARKET_ORDERS_PER_TURN = 10  # python-kit/README.md L354
+_TOWN_CENTER_SELL_INTERVAL = 24  # python-kit/README.md L360
 
 
 def _clone_state(obs, memo=None):
@@ -1064,6 +1065,29 @@ def _apply_market_order(state, farm, private, order):
         _apply_sell(state, farm, private, args[0], args[1] if len(args) > 1 else 1)
 
 
+def _apply_town_consumption(state, hour, day):
+    """Drain market inventory for town-center demand (python-kit/README.md L173, L360).
+
+    Args:
+        state: The forward-simulated state, mutated in place; "market" (and
+            its "inventory" sub-dict) is created on demand.
+        hour: The turn's hour-of-day before this turn's increment.
+        day: The turn's day before this turn's increment.
+
+    Returns:
+        None. Every _MARKET_PARAMS resource except FERTILIZER loses 1 unit
+        of market inventory whenever hour is a multiple of
+        _TOWN_CENTER_SELL_INTERVAL (i.e. once per day, at hour 0) — the town
+        center "consumes one of every product (excluding fertilizer)"
+        (python-kit/README.md L173), a flat rate that "does not ramp".
+    """
+    inventory = state.setdefault("market", {}).setdefault("inventory", {})
+    if hour % _TOWN_CENTER_SELL_INTERVAL == 0:
+        for item in _MARKET_PARAMS:
+            if item != "FERTILIZER":
+                inventory[item] = inventory.get(item, _MARKET_I0) - 1
+
+
 def _day_refresh(farm):
     """Update plant/animal condition for a new day at the day-rollover boundary.
 
@@ -1224,11 +1248,12 @@ def _apply_action(obs, action_dict):
     (gated by the all-or-nothing simultaneous-planting rule), and the market
     orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL (capped
     at _MAX_MARKET_ORDERS_PER_TURN, extras silently dropped per python-kit/
-    README.md L94/L354), plus day-rollover's animal-escaping/weed-conversion/
-    consecutive-unfed updates (_day_refresh). Still deferred, per the
-    walking-skeleton approach: town consumption, cross-player concurrent
-    market processing (this function only ever simulates the acting player's
-    own turn), weed spawning, post-max-lifespan yield decay,
+    README.md L94/L354), the town center's daily market-inventory drain
+    (_apply_town_consumption), plus day-rollover's animal-escaping/weed-
+    conversion/consecutive-unfed updates (_day_refresh). Still deferred, per
+    the walking-skeleton approach: town shop consumption, cross-player
+    concurrent market processing (this function only ever simulates the
+    acting player's own turn), weed spawning, post-max-lifespan yield decay,
     fertilizer_available's end-of-day True-set, and market "prices" refresh
     (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
 
@@ -1249,6 +1274,7 @@ def _apply_action(obs, action_dict):
     private = state.get("private", {})
 
     day = state.get("day", 0)
+    hour = state.get("hour", 0)
 
     farmer_entry = action_dict.get("farmer") or []
     hand_entries = action_dict.get("hands") or []
@@ -1267,7 +1293,9 @@ def _apply_action(obs, action_dict):
     for order in (action_dict.get("market") or [])[:_MAX_MARKET_ORDERS_PER_TURN]:
         _apply_market_order(state, farm, private, order)
 
-    hour = state.get("hour", 0) + 1
+    _apply_town_consumption(state, hour, day)
+
+    hour += 1
     if hour >= _TURNS_PER_DAY:
         hour = 0
         state["day"] = state.get("day", 0) + 1
