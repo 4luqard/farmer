@@ -728,7 +728,7 @@ def test_sell():
     assert _apply_action(original_state, action_dict)['farms'][0]['money'] == 2725
 
         
-def test_plant_turning_to_weed():
+def test_plant_turning_to_weed_by_not_watering():
     original_state = {
         "player": 0,
         "day": 1,
@@ -766,6 +766,6 @@ def test_animal_escaping():
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3)
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
 
-    
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
