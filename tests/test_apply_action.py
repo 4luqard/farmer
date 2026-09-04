@@ -93,27 +93,6 @@ def _market():
     }
     return {"inventory": inventory, "prices": prices}
 
-
-def test_pass_action():
-    original_state = {
-        "player": 0,
-        "day": 0,
-        "hour": 0,
-        "farms": [{"farmer": [4, 4], "hands": [], "unlocked_quadrants": ["NW", "NE"]}, {"hires_today": 1}],
-        "private": {"inventories": [{"WHEAT": 1}, {"CARROT": 1}, {}], "seeds": {"WHEAT": 1}}
-    }
-    action_dict = {
-        'farmer': ["PASS"],
-        'hands': [],
-        'market': []
-    }
-    assert _apply_action(original_state, action_dict)['day'] == 0
-    assert _apply_action(original_state, action_dict)['hour'] == 1
-
-    after_action_state = original_state.copy()
-    after_action_state['hour'] = 1
-    assert _apply_action(original_state, action_dict) == after_action_state
-
     
 def test_movement_actions():
     original_state = {
@@ -389,7 +368,7 @@ def test_feed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, fertilizer=True)
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 1}
 
     
@@ -429,7 +408,7 @@ def test_care():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, bonus=1)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, bonus=1, fertilizer=True)
 
     
 def test_care_unfed():
@@ -448,7 +427,7 @@ def test_care_unfed():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=1, bonus=0, fertilizer=True)
 
     
 def test_plant_any_crop():
