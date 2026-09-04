@@ -510,6 +510,7 @@ def _possible_actions(obs) -> dict:
 
 _TURNS_PER_DAY = 24  # python-kit/README.md L355
 _EPISODE_STEPS = 720  # python-kit/README.md L351
+_MAX_MARKET_ORDERS_PER_TURN = 10  # python-kit/README.md L354
 
 
 def _clone_state(obs, memo=None):
@@ -1221,12 +1222,13 @@ def _apply_action(obs, action_dict):
     clock. Handles PASS, the four movement directions, WATER, FERTILIZE,
     HARVEST, DIG, DROP, FEED, COLLECT_FERTILIZER, PICKUP, PLACE, PLANT
     (gated by the all-or-nothing simultaneous-planting rule), and the market
-    orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL, plus
-    day-rollover's animal-escaping/weed-conversion/consecutive-unfed updates
-    (_day_refresh). Still deferred, per the walking-skeleton approach: town
-    consumption, cross-player concurrent market processing (this function
-    only ever simulates the acting player's own turn), maxMarketOrdersPerTurn
-    truncation, weed spawning, post-max-lifespan yield decay,
+    orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL (capped
+    at _MAX_MARKET_ORDERS_PER_TURN, extras silently dropped per python-kit/
+    README.md L94/L354), plus day-rollover's animal-escaping/weed-conversion/
+    consecutive-unfed updates (_day_refresh). Still deferred, per the
+    walking-skeleton approach: town consumption, cross-player concurrent
+    market processing (this function only ever simulates the acting player's
+    own turn), weed spawning, post-max-lifespan yield decay,
     fertilizer_available's end-of-day True-set, and market "prices" refresh
     (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
 
@@ -1262,7 +1264,7 @@ def _apply_action(obs, action_dict):
         if hand_entries[i] and i < len(hands):
             hands[i] = _apply_unit_action(farm, private, i + 1, hands[i], hand_action, day, plant_allowed)
 
-    for order in action_dict.get("market") or []:
+    for order in (action_dict.get("market") or [])[:_MAX_MARKET_ORDERS_PER_TURN]:
         _apply_market_order(state, farm, private, order)
 
     hour = state.get("hour", 0) + 1
