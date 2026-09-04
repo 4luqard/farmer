@@ -1076,6 +1076,48 @@ def _apply_market_order(state, farm, private, order):
         _apply_sell(state, farm, private, args[0], args[1] if len(args) > 1 else 1)
 
 
+def _apply_decay(farm, day):
+    """Decay one-time crops past their max lifespan (python-kit/README.md L126-127).
+
+    Args:
+        farm: The acting player's farm dict, mutated in place; "tiles" is
+            scanned for PLANT tiles.
+        day: The current in-game day (this must run every turn, not just at
+            day rollover — python-kit/README.md doesn't gate decay on the
+            day-refresh boundary, and tests/test_apply_action.py's
+            test_plant_turning_to_weed_by_decay exercises it mid-day).
+
+    Returns:
+        None. Each tile is visited at most once, keyed by id() (mirroring
+        _clone_state's/_day_refresh's memo, for the same aliased-grid-row
+        reason). A one-time crop (_ONE_TIME_CROPS) whose age
+        (day - planted_day) has reached max_lifespan_left loses 1
+        yield_units; once yield_units hits 0 the tile becomes a weed.
+        Ongoing crops (max_lifespan_left == -1, the existing sentinel) are
+        untouched — no test yet exercises their production-count-based
+        decay. The "every other turn" decrement cadence (python-kit/
+        README.md L126) is also not exercised by the one given test, so
+        this decrements every call once the threshold is reached; deferred
+        like _day_refresh already defers its own unexercised sub-rules.
+    """
+    seen = set()
+    for row in farm.get("tiles") or []:
+        for x, tile in enumerate(row):
+            if not isinstance(tile, dict) or id(tile) in seen:
+                continue
+            seen.add(id(tile))
+            if tile.get("kind") != "PLANT" or tile.get("crop") not in _ONE_TIME_CROPS:
+                continue
+            lifespan = tile.get("max_lifespan_left", -1)
+            if lifespan < 0 or day - tile.get("planted_day", 0) < lifespan:
+                continue
+            units = tile.get("yield_units", 0) - 1
+            if units <= 0:
+                row[x] = {"kind": "WEED"}
+            else:
+                tile["yield_units"] = units
+
+
 def _apply_town_consumption(state, hour, day):
     """Drain market inventory for town-center demand (python-kit/README.md L173, L360).
 
@@ -1273,13 +1315,14 @@ def _apply_action(obs, action_dict):
     orders HIRE, BUY_LAND, BUY_SEED, BUY_PRODUCT, BUY_ANIMAL and SELL (capped
     at _MAX_MARKET_ORDERS_PER_TURN, extras silently dropped per python-kit/
     README.md L94/L354), the town center's and every unlocked town shop's
-    market-inventory drain (_apply_town_consumption), plus day-rollover's
-    animal-escaping/weed-conversion/consecutive-unfed updates (_day_refresh).
-    Still deferred, per the walking-skeleton approach: cross-player
-    concurrent market processing (this function only ever simulates the
-    acting player's own turn), weed spawning, post-max-lifespan yield decay,
-    fertilizer_available's end-of-day True-set, and market "prices" refresh
-    (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
+    market-inventory drain (_apply_town_consumption), one-time crops' post-
+    max-lifespan yield decay (_apply_decay), plus day-rollover's animal-
+    escaping/weed-conversion/consecutive-unfed updates (_day_refresh). Still
+    deferred, per the walking-skeleton approach: cross-player concurrent
+    market processing (this function only ever simulates the acting
+    player's own turn), weed spawning, ongoing crops' production-count-based
+    decay, fertilizer_available's end-of-day True-set, and market "prices"
+    refresh (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
@@ -1318,6 +1361,7 @@ def _apply_action(obs, action_dict):
         _apply_market_order(state, farm, private, order)
 
     _apply_town_consumption(state, hour, day)
+    _apply_decay(farm, day)
 
     hour += 1
     if hour >= _TURNS_PER_DAY:
