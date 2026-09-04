@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import random
 
 __all__ = ["laziest_farmer", "_opponent_tracker", "_possible_actions", "_clone_state", "_is_terminal", "_apply_action"]
 
@@ -511,6 +512,7 @@ def _possible_actions(obs) -> dict:
 _TURNS_PER_DAY = 24  # python-kit/README.md L355
 _EPISODE_STEPS = 720  # python-kit/README.md L351
 _MAX_MARKET_ORDERS_PER_TURN = 10  # python-kit/README.md L354
+_WEED_SPAWN_CHANCE = 0.005  # python-kit/README.md L357
 _TOWN_CENTER_SELL_INTERVAL = 24  # python-kit/README.md L360
 _TOWN_SHOP_SELL_INTERVAL = 4  # python-kit/README.md L359
 _SHOP_DEMAND = {  # python-kit/README.md Town Buildings table L175-184; only "BAKERY" has a confirmed observation spelling
@@ -1190,6 +1192,16 @@ def _day_refresh(farm):
         the plant turns to a weed: the tile is replaced with {"kind": "WEED"}
         (python-kit/README.md "Watering / Animal Feed": "left unwatered for
         two consecutive days, at the end of the day they turn into a WEED").
+
+        Separately, every empty (None) tile has an independent
+        _WEED_SPAWN_CHANCE probability of spawning a weed this rollover
+        ("every empty unlocked tile has a weedSpawnChance ... of spawning a
+        weed at end-of-day", python-kit/README.md L357/AGENTS.md L19) — a
+        genuine, unseeded random.random() roll per the user's instruction,
+        not a deterministic formula. This makes
+        tests/test_apply_action.py's test_random_weed_spawn_chance
+        inherently flaky: it hard-codes one exact resulting weed tile, which
+        this roll will only reproduce by chance.
     """
     seen = set()
     tiles = farm.get("tiles") or []
@@ -1220,6 +1232,10 @@ def _day_refresh(farm):
                 tile["watered_today"] = False
                 if tile["consecutive_unwatered"] >= 2:
                     row[x] = {"kind": "WEED"}
+    for row in tiles:
+        for x, tile in enumerate(row):
+            if tile is None and random.random() < _WEED_SPAWN_CHANCE:
+                row[x] = {"kind": "WEED"}
 
 
 def _unit_action(entry):
@@ -1322,12 +1338,12 @@ def _apply_action(obs, action_dict):
     README.md L94/L354), the town center's and every unlocked town shop's
     market-inventory drain (_apply_town_consumption), one-time crops' post-
     max-lifespan yield decay (_apply_decay), plus day-rollover's animal-
-    escaping/weed-conversion/consecutive-unfed/fertilizer_available updates
-    (_day_refresh). Still deferred, per the walking-skeleton approach:
-    cross-player concurrent market processing (this function only ever
-    simulates the acting player's own turn), weed spawning, ongoing crops'
-    production-count-based decay, and market "prices" refresh (BUY_PRODUCT/
-    SELL update "inventory" but leave "prices" stale).
+    escaping/weed-conversion/consecutive-unfed/fertilizer_available/random-
+    weed-spawn updates (_day_refresh). Still deferred, per the walking-
+    skeleton approach: cross-player concurrent market processing (this
+    function only ever simulates the acting player's own turn), ongoing
+    crops' production-count-based decay, and market "prices" refresh
+    (BUY_PRODUCT/SELL update "inventory" but leave "prices" stale).
 
     Args:
         obs: The observation dict for the current turn; left unchanged.
