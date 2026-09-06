@@ -80,13 +80,13 @@ _LAND_COSTS = [1000, 2000, 4000]
 _QUADRANT_ORDER = ["NW", "NE", "SW", "SE"]  # BUY_LAND unlock order, python-kit/AGENTS.md: "NE, SW, SE ... $1k/$2k/$4k respectively"
 _MARKET_I0 = 10000
 _PRICE_FLOOR = 1
-_MARKET_PARAMS = {  # both sides of the price curve, python-kit/README.md Price Function table L222-232
+_MARKET_PARAMS = {  # both sides of the price curve, python-kit/README.md Price Function table L232-242
     "WHEAT":      {"base": 25,  "T": 400, "below_func": "sqrt",   "below_target": 0.80, "above_func": "log",    "above_target": 0.20},
-    "CARROT":     {"base": 35,  "T": 450, "below_func": "log",    "below_target": 0.20, "above_func": "sqrt",   "above_target": 0.70},
-    "TOMATO":     {"base": 60,  "T": 200, "below_func": "linear", "below_target": 0.40, "above_func": "sqrt",   "above_target": 0.60},
+    "CARROT":     {"base": 35,  "T": 450, "below_func": "hinge",  "below_target": 1.00, "above_func": "sqrt",   "above_target": 0.70},
+    "TOMATO":     {"base": 60,  "T": 200, "below_func": "hinge",  "below_target": 0.40, "above_func": "sqrt",   "above_target": 0.60},
     "STRAWBERRY": {"base": 120, "T": 100, "below_func": "sqrt",   "below_target": 0.70, "above_func": "linear", "above_target": 1.60},
     "MELON":      {"base": 250, "T": 300, "below_func": "log",    "below_target": 0.20, "above_func": "sq",     "above_target": 3.60},
-    "EGG":        {"base": 50,  "T": 332, "below_func": "linear", "below_target": 0.40, "above_func": "log",    "above_target": 0.20},
+    "EGG":        {"base": 50,  "T": 332, "below_func": "hinge",  "below_target": 0.40, "above_func": "log",    "above_target": 0.20},
     "MILK":       {"base": 160, "T": 122, "below_func": "sqrt",   "below_target": 0.60, "above_func": "linear", "above_target": 1.60},
     "WOOL":       {"base": 200, "T": 105, "below_func": "log",    "below_target": 0.20, "above_func": "sq",     "above_target": 3.20},
     "FERTILIZER": {"base": 100, "T": 200, "below_func": "linear", "below_target": 0.40, "above_func": "linear", "above_target": 0.40},
@@ -109,20 +109,23 @@ def _hire_cost(hires_today):
     return a
 
 
-def _shape(func, x):
+def _shape(func, x, T):
     """Apply a market price curve's shape function.
 
     Args:
-        func: Curve name from _MARKET_PARAMS: "sqrt", "sq", "log", or
-            "linear". "log10" is named in python-kit/README.md's abstract
+        func: Curve name from _MARKET_PARAMS: "sqrt", "sq", "log", "hinge",
+            or "linear". "log10" is named in python-kit/README.md's abstract
             formula but no resource in the Price Function table actually
             uses it, so it is deliberately omitted.
         x: The curve input; negative values are clamped to 0.
+        T: The resource's anchor throughput. Unused except by "hinge", the
+            one curve that depends on T rather than on x alone.
 
     Returns:
         sqrt(x) for "sqrt", x**2 for "sq", ln(1+x) for "log" (python-kit/
-        README.md: "log uses ln(1+x), so f(0)=0"), otherwise x itself —
-        unknown names deliberately fall back to the linear curve.
+        README.md: "log uses ln(1+x), so f(0)=0"), u + 8*max(0, u-1)**2
+        with u = x/T for "hinge", otherwise x itself — unknown names
+        deliberately fall back to the linear curve.
     """
     x = max(0.0, x)
     if func == "sqrt":
@@ -131,6 +134,9 @@ def _shape(func, x):
         return x ** 2
     if func == "log":
         return math.log1p(x)
+    if func == "hinge":
+        u = x / T
+        return u + 8 * max(0.0, u - 1) ** 2
     return x  # "linear" + documented fallback
 
 
@@ -159,8 +165,8 @@ def _price(item, inv):
         func, target, sign = p["above_func"], p["above_target"], -1
     else:
         return base
-    amp = target * base / _shape(func, T)
-    return max(_PRICE_FLOOR, int(round(base + sign * amp * _shape(func, abs(inv - _MARKET_I0)))))
+    amp = target * base / _shape(func, T, T)
+    return max(_PRICE_FLOOR, int(round(base + sign * amp * _shape(func, abs(inv - _MARKET_I0), T))))
 
 
 def _buy_price(item, inv):
