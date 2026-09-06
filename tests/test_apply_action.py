@@ -150,7 +150,7 @@ def test_harvest_plant():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=2), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seeds": {"CARROT": 2}}
+        "private": {"inventories": [{}, {}], "seeds": {"CARROT": 2}}
     }
     action_dict = {
         'farmer': ['HARVEST'],
@@ -158,6 +158,7 @@ def test_harvest_plant():
         'market': []
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'][2][3] == None
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
 
     
 def test_harvest_ongoing_plant():
@@ -169,7 +170,7 @@ def test_harvest_ongoing_plant():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, crop='TOMATO', units=2, lifespan=-1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seeds": {"CARROT": 2}}
+        "private": {"inventories": [{}, {}], "seeds": {"CARROT": 2}}
     }
     action_dict = {
         'farmer': ['HARVEST'],
@@ -177,6 +178,7 @@ def test_harvest_ongoing_plant():
         'market': []
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(2, 3, crop='TOMATO', units=0, lifespan=-1)
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"TOMATO": 2}
 
     
 def test_harvest_animal():
@@ -188,7 +190,7 @@ def test_harvest_animal():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _animal_tile(2, 3, animal="GOOSE", units=1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seeds": {"CARROT": 2}}
+        "private": {"inventories": [{}, {}], "seeds": {"CARROT": 2}}
     }
     action_dict = {
         'farmer': ['HARVEST'],
@@ -196,6 +198,7 @@ def test_harvest_animal():
         'market': []
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE")
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"EGG": 1}
 
     
 def test_fertilize():

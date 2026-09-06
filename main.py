@@ -67,6 +67,7 @@ _BOARD_SIZE = 10
 _SHED_CAPACITY = 100
 _ANIMALS = {"GOOSE", "COW", "SHEEP"}
 _STRUCTURE_ANIMALS = {"COOP": ("GOOSE",), "PASTURE": ("COW", "SHEEP")}
+_ANIMAL_PRODUCTS = {"GOOSE": "EGG", "COW": "MILK", "SHEEP": "WOOL"}  # python-kit/README.md Object Types table: Goose/Egg, Cow/Milk, Sheep/Wool
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
@@ -705,6 +706,67 @@ def _apply_place(farm, private, index, pos, item, n):
             inventory.pop(item, None)
 
 
+def _apply_harvest(farm, private, index, pos):
+    """Apply one unit's HARVEST action, crediting its inventory when it has an effect.
+
+    python-kit/README.md, "HARVEST": harvesting a plant or an animal
+    structure both clears/resets a farm tile *and* credits the unit's
+    private inventory together — the same "needs farm and private
+    together" situation _apply_place already handles for PLACE, so
+    HARVEST gets its own dedicated function too, called directly from
+    _apply_unit_action's dispatch instead of falling through to the
+    _apply_tile_action + _apply_shed_action pair.
+
+    Args:
+        farm: The acting player's farm dict, mutated in place.
+        private: The player's private state, mutated in place;
+            "inventories" is read/written.
+        index: Which unit is acting: 0 for the farmer, i + 1 for hand i.
+        pos: [x, y] board position of the acting unit, or None.
+
+    Returns:
+        None. Reproduces _apply_tile_action's former HARVEST tile-mutation
+        exactly and unconditionally: on a PLANT tile, clears it to None
+        when its crop has no subsequent yields (_ONE_TIME_CROPS), otherwise
+        (ongoing crops TOMATO/STRAWBERRY) resets yield_units to 0; on a
+        COOP/PASTURE, resets yield_units to 0 regardless of whether it
+        carries an animal. Before mutating, captures the tile's yield_units
+        and resolves the harvested product — the crop name for a PLANT
+        tile, or _ANIMAL_PRODUCTS[tile["animal"]] for a structure tile
+        (EGG/MILK/WOOL, not GOOSE/COW/SHEEP) — then, only when there's an
+        inventories list for this unit, a resolvable product, and a
+        positive captured yield_units, adds that many units of the product
+        to the unit's inventory. An empty COOP/PASTURE (no animal) credits
+        nothing, same as a tile that isn't a PLANT or animal structure;
+        both still leave the farm untouched, matching _apply_tile_action's
+        prior behavior.
+    """
+    tile = _tile_at(farm, pos)
+    if not isinstance(tile, dict):
+        return
+    kind = tile.get("kind")
+    if kind == "PLANT":
+        product = tile.get("crop")
+        units = tile.get("yield_units", 0)
+        if product in _ONE_TIME_CROPS:
+            _set_tile(farm, pos, None)
+        else:
+            tile["yield_units"] = 0
+    elif kind in _STRUCTURE_ANIMALS:
+        product = _ANIMAL_PRODUCTS.get(tile.get("animal"))
+        units = tile.get("yield_units", 0)
+        tile["yield_units"] = 0
+    else:
+        return
+    if not product or units <= 0:
+        return
+    inventories = private.get("inventories")
+    if not inventories or index >= len(inventories):
+        return
+    inventory = inventories[index]
+    inventory[product] = inventory.get(product, 0) + units
+
+
 def _apply_tile_action(farm, pos, action, day):
     """Apply one unit's action to the tile it stands on, if it has an effect.
 
@@ -722,24 +784,22 @@ def _apply_tile_action(farm, pos, action, day):
         None. On a WEED tile: "DIG" clears it to None. On a PLANT tile:
         "WATER" marks it watered for today; "FERTILIZE" sets
         fertilized_until_day to day + 2, a 3-day bonus window starting today
-        (python-kit/README.md); "HARVEST" clears the tile to None when its
-        crop has no subsequent yields (_ONE_TIME_CROPS), and otherwise
-        (ongoing crops TOMATO/STRAWBERRY) resets yield_units to 0; "DIG"
-        clears it to None regardless of yield state. On a COOP/PASTURE:
-        "HARVEST" resets yield_units to 0; "DIG" clears it to None — the
-        documented no-op for a structure with an animal on it
-        (python-kit/README.md) is deferred, since no test exercises it yet.
-        "FEED" marks it fed_today for the day — the matching WHEAT
-        deduction is applied separately by _apply_shed_action, since this
-        function has no access to private inventories. "CARE" marks it
-        cared_today for the day; the yield bonus it banks is applied
-        separately by _day_refresh, at end of day. On an empty tile:
-        "BUILD_COOP"/"BUILD_PASTURE" writes a freshly-placed COOP/PASTURE
-        tile (_new_structure_tile). Planting a seed (_apply_plant) and
-        PLACE (_apply_place) are handled by their own dedicated functions
-        instead of here, since both need private inventory access this
-        function doesn't have. Every other tile-kind/action combination is
-        deferred to later tests, per the walking-skeleton approach.
+        (python-kit/README.md); "DIG" clears it to None regardless of yield
+        state. On a COOP/PASTURE: "DIG" clears it to None — the documented
+        no-op for a structure with an animal on it (python-kit/README.md)
+        is deferred, since no test exercises it yet. "FEED" marks it
+        fed_today for the day — the matching WHEAT deduction is applied
+        separately by _apply_shed_action, since this function has no
+        access to private inventories. "CARE" marks it cared_today for the
+        day; the yield bonus it banks is applied separately by
+        _day_refresh, at end of day. On an empty tile: "BUILD_COOP"/
+        "BUILD_PASTURE" writes a freshly-placed COOP/PASTURE tile
+        (_new_structure_tile). Planting a seed (_apply_plant), PLACE
+        (_apply_place) and HARVEST (_apply_harvest) are handled by their
+        own dedicated functions instead of here, since each needs private
+        inventory access this function doesn't have. Every other
+        tile-kind/action combination is deferred to later tests, per the
+        walking-skeleton approach.
     """
     tile = _tile_at(farm, pos)
     if tile is None:
@@ -759,17 +819,10 @@ def _apply_tile_action(farm, pos, action, day):
             tile["watered_today"] = True
         elif action == "FERTILIZE":
             tile["fertilized_until_day"] = day + 2
-        elif action == "HARVEST":
-            if tile.get("crop") in _ONE_TIME_CROPS:
-                _set_tile(farm, pos, None)
-            else:
-                tile["yield_units"] = 0
         elif action == "DIG":
             _set_tile(farm, pos, None)
     elif kind in _STRUCTURE_ANIMALS:
-        if action == "HARVEST":
-            tile["yield_units"] = 0
-        elif action == "DIG":
+        if action == "DIG":
             _set_tile(farm, pos, None)
         elif action == "FEED":
             tile["fed_today"] = True
@@ -1320,10 +1373,11 @@ def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
 
     Returns:
         The unit's new [x, y] position (_move's result — a no-op for
-        PLACE/PLANT, which aren't movement actions). PLACE dispatches to
-        _apply_place; PLANT dispatches to _apply_plant only when its crop
-        is in plant_allowed; every other action falls through to the
-        existing _apply_tile_action + _apply_shed_action pair.
+        PLACE/PLANT/HARVEST, none of which are movement actions). PLACE
+        dispatches to _apply_place; PLANT dispatches to _apply_plant only
+        when its crop is in plant_allowed; HARVEST dispatches to
+        _apply_harvest; every other action falls through to the existing
+        _apply_tile_action + _apply_shed_action pair.
     """
     verb = action[0] if isinstance(action, list) else action
     if verb == "PLACE":
@@ -1334,6 +1388,8 @@ def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
         crop = action[1]
         if crop in plant_allowed:
             _apply_plant(farm, private, pos, crop, day)
+    elif verb == "HARVEST":
+        _apply_harvest(farm, private, index, pos)
     else:
         _apply_tile_action(farm, pos, action, day)
         _apply_shed_action(private, index, action)
