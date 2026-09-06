@@ -210,7 +210,7 @@ def test_fertilize():
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, fertilized=-1), "unlocked_quadrants": ['NW']},
             {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
         ],
-        "private": {"seeds": {"CARROT": 2}}
+        "private": {'inventories': [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }
     action_dict = {
         'farmer': ['FERTILIZE'],
@@ -218,6 +218,7 @@ def test_fertilize():
         'market': []
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(2, 3, fertilized=3)
+    assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {}
 
     
 def test_dig_weed():

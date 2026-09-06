@@ -75,6 +75,7 @@ _MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 10}  # python-kit/README.md 
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _FEED_WHEAT_COST = 1  # WHEAT per FEED; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_feed
+_FERTILIZE_COST = 1  # FERTILIZER per FERTILIZE; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_fertilize (same situation as _FEED_WHEAT_COST)
 _LAND_COSTS = [1000, 2000, 4000]
 _QUADRANT_ORDER = ["NW", "NE", "SW", "SE"]  # BUY_LAND unlock order, python-kit/AGENTS.md: "NE, SW, SE ... $1k/$2k/$4k respectively"
 _MARKET_I0 = 10000
@@ -852,19 +853,25 @@ def _apply_shed_action(private, index, action):
         "FEED" deducts _FEED_WHEAT_COST WHEAT from the unit's inventory; the
         matching fed_today flag on the tile is set separately by
         _apply_tile_action, which has access to the farm but not private.
-        "COLLECT_FERTILIZER" adds 1 FERTILIZER to the unit's inventory; the
-        matching fertilizer_available flag is cleared separately by
-        _apply_tile_action, for the same reason. ["PICKUP", item, n] moves
-        up to n of item (default 1) from private["shed"] into the unit's
-        inventory. Shed-adjacency is not re-checked here: _possible_actions
-        only ever offers DROP/PICKUP to a unit already standing beside the
-        shed; likewise FEED's WHEAT-availability and COLLECT_FERTILIZER's
+        "FERTILIZE" deducts _FERTILIZE_COST FERTILIZER from the unit's
+        inventory, popping the key once it reaches zero (matching
+        _apply_place's pop-at-zero convention, unlike FEED's own convention
+        of leaving a literal WHEAT key behind); the matching
+        fertilized_until_day window is set separately by _apply_tile_action,
+        for the same reason. "COLLECT_FERTILIZER" adds 1 FERTILIZER to the
+        unit's inventory; the matching fertilizer_available flag is cleared
+        separately by _apply_tile_action, for the same reason. ["PICKUP",
+        item, n] moves up to n of item (default 1) from private["shed"]
+        into the unit's inventory. Shed-adjacency is not re-checked here:
+        _possible_actions only ever offers DROP/PICKUP to a unit already
+        standing beside the shed; likewise FEED's WHEAT-availability,
+        FERTILIZE's FERTILIZER-availability, and COLLECT_FERTILIZER's
         fertilizer_available preconditions are only checked by
         _possible_actions, not re-validated here. Every other action is
         deferred to later tests.
     """
     is_pickup = isinstance(action, list) and action[:1] == ["PICKUP"]
-    if action not in ("DROP", "FEED", "COLLECT_FERTILIZER") and not is_pickup:
+    if action not in ("DROP", "FEED", "FERTILIZE", "COLLECT_FERTILIZER") and not is_pickup:
         return
     inventories = private.get("inventories")
     if not inventories or index >= len(inventories):
@@ -881,6 +888,13 @@ def _apply_shed_action(private, index, action):
     elif action == "FEED":
         inventory = inventories[index]
         inventory["WHEAT"] = inventory.get("WHEAT", 0) - _FEED_WHEAT_COST
+    elif action == "FERTILIZE":
+        inventory = inventories[index]
+        left = inventory.get("FERTILIZER", 0) - _FERTILIZE_COST
+        if left > 0:
+            inventory["FERTILIZER"] = left
+        else:
+            inventory.pop("FERTILIZER", None)
     elif action == "COLLECT_FERTILIZER":
         inventory = inventories[index]
         inventory["FERTILIZER"] = inventory.get("FERTILIZER", 0) + 1
