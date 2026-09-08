@@ -801,8 +801,11 @@ def _apply_tile_action(farm, pos, action, day):
 
     Returns:
         None. On a WEED tile: "DIG" clears it to None. On a PLANT tile:
-        "WATER" marks it watered for today, and, once the plant is a
-        one-time crop whose age is inside its bonus window
+        "WATER" marks it watered for today and immediately resets
+        consecutive_unwatered to 0 (a deliberate simplification: the real
+        engine only recomputes this counter at day-rollover, but this
+        codebase updates it the same turn it's watered), and, once the
+        plant is a one-time crop whose age is inside its bonus window
         (_YIELD_BONUS_START[crop] through _MAX_YIELD_DAY[crop] inclusive,
         matching the python-kit engine's window_start/max_yield_day
         bounds), also grows yield_units by _WATER_GROWTH (or
@@ -844,6 +847,7 @@ def _apply_tile_action(farm, pos, action, day):
     elif kind == "PLANT":
         if action == "WATER":
             tile["watered_today"] = True
+            tile["consecutive_unwatered"] = 0
             crop = tile.get("crop")
             age = day - tile.get("planted_day", 0)
             if crop in _ONE_TIME_CROPS and _YIELD_BONUS_START[crop] <= age <= _MAX_YIELD_DAY[crop]:
