@@ -937,6 +937,25 @@ def _apply_shed_action(private, index, action):
                 shed.pop(item, None)
 
 
+def _apply_end_of_day_shed_dump(private):
+    """Move every unit's full inventory into the shed at end of day.
+
+    Reuses _apply_shed_action's "DROP" branch (capacity-capped, overflow
+    discarded) for each unit, since python-kit/README.md documents this as
+    the same drop mechanic, just unconditional on position instead of
+    requiring shed-adjacency ("Farmer and hired farm hands drop their
+    inventory at the end of the day in the shed (if there is room)").
+
+    Args:
+        private: The player's private state, mutated in place.
+
+    Returns:
+        None.
+    """
+    for idx in range(len(private.get("inventories") or [])):
+        _apply_shed_action(private, idx, "DROP")
+
+
 def _hire_spawn(farm):
     """Pick the spawn position for a newly-hired hand.
 
@@ -1503,6 +1522,7 @@ def _apply_action(obs, action_dict, weeds_enabled=True, seed=None):
         hour = 0
         state["day"] = state.get("day", 0) + 1
         _day_refresh(farm, weeds_enabled=weeds_enabled, seed=seed)
+        _apply_end_of_day_shed_dump(private)
     state["hour"] = hour
 
     return state

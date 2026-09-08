@@ -947,5 +947,27 @@ def test_water_incresing_yield_along_with_fertilizer():
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=True)
 
 
+def test_entities_inventory_dumping_at_day_refresh():
+    original_state = {
+        "player": 0,
+        "day": 3,
+        "hour": 23,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"shed": {"WHEAT": 1, "TOMATO": 0}, "inventories": [{"WHEAT": 1}, {"CARROT": 3}], "seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ["WATER"],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=False)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['shed']['WHEAT'] == 2
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['shed']['CARROT'] == 3
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'] == [{}, {}]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
