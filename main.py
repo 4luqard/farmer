@@ -725,7 +725,7 @@ def _apply_place(farm, private, index, pos, item, n):
             inventory.pop(item, None)
 
 
-def _apply_harvest(farm, private, index, pos):
+def _apply_harvest(farm, private, index, pos, day):
     """Apply one unit's HARVEST action, crediting its inventory when it has an effect.
 
     python-kit/README.md, "HARVEST": harvesting a plant or an animal
@@ -742,23 +742,31 @@ def _apply_harvest(farm, private, index, pos):
             "inventories" is read/written.
         index: Which unit is acting: 0 for the farmer, i + 1 for hand i.
         pos: [x, y] board position of the acting unit, or None.
+        day: The current in-game day, used to gate a PLANT tile's harvest
+            on its age (matching _base_actions' own HARVEST-availability
+            gate and the python-kit engine's HARVEST handler).
 
     Returns:
-        None. Reproduces _apply_tile_action's former HARVEST tile-mutation
-        exactly and unconditionally: on a PLANT tile, clears it to None
-        when its crop has no subsequent yields (_ONE_TIME_CROPS), otherwise
-        (ongoing crops TOMATO/STRAWBERRY) resets yield_units to 0; on a
+        None. On a PLANT tile whose age (day - planted_day) hasn't yet
+        reached _FIRST_YIELD_DAY[crop], no-ops entirely (no tile mutation,
+        no inventory credit) — mirrors _base_actions' own gate, so calling
+        HARVEST directly can't bypass it. Otherwise reproduces
+        _apply_tile_action's former HARVEST tile-mutation exactly and
+        unconditionally: on a PLANT tile, clears it to None when its crop
+        has no subsequent yields (_ONE_TIME_CROPS), otherwise (ongoing
+        crops TOMATO/STRAWBERRY) resets yield_units to 0; on a
         COOP/PASTURE, resets yield_units to 0 regardless of whether it
-        carries an animal. Before mutating, captures the tile's yield_units
-        and resolves the harvested product — the crop name for a PLANT
-        tile, or _ANIMAL_PRODUCTS[tile["animal"]] for a structure tile
-        (EGG/MILK/WOOL, not GOOSE/COW/SHEEP) — then, only when there's an
-        inventories list for this unit, a resolvable product, and a
-        positive captured yield_units, adds that many units of the product
-        to the unit's inventory. An empty COOP/PASTURE (no animal) credits
-        nothing, same as a tile that isn't a PLANT or animal structure;
-        both still leave the farm untouched, matching _apply_tile_action's
-        prior behavior.
+        carries an animal (no age gate for animal structures, matching the
+        python-kit engine). Before mutating, captures the tile's
+        yield_units and resolves the harvested product — the crop name for
+        a PLANT tile, or _ANIMAL_PRODUCTS[tile["animal"]] for a structure
+        tile (EGG/MILK/WOOL, not GOOSE/COW/SHEEP) — then, only when
+        there's an inventories list for this unit, a resolvable product,
+        and a positive captured yield_units, adds that many units of the
+        product to the unit's inventory. An empty COOP/PASTURE (no animal)
+        credits nothing, same as a tile that isn't a PLANT or animal
+        structure; both still leave the farm untouched, matching
+        _apply_tile_action's prior behavior.
     """
     tile = _tile_at(farm, pos)
     if not isinstance(tile, dict):
@@ -766,6 +774,8 @@ def _apply_harvest(farm, private, index, pos):
     kind = tile.get("kind")
     if kind == "PLANT":
         product = tile.get("crop")
+        if day - tile.get("planted_day", 0) < _FIRST_YIELD_DAY.get(product, 0):
+            return
         units = tile.get("yield_units", 0)
         if product in _ONE_TIME_CROPS:
             _set_tile(farm, pos, None)
@@ -1468,7 +1478,7 @@ def _apply_unit_action(farm, private, index, pos, action, day, plant_allowed):
         if crop in plant_allowed:
             _apply_plant(farm, private, pos, crop, day)
     elif verb == "HARVEST":
-        _apply_harvest(farm, private, index, pos)
+        _apply_harvest(farm, private, index, pos, day)
     else:
         _apply_tile_action(farm, pos, action, day)
         _apply_shed_action(private, index, action)

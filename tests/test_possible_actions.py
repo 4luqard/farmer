@@ -26,8 +26,8 @@ def _weed_tile(y, x, unlocked_quadrants=['NW']):
     return tiles
 
 def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
-               watered=False, unwatered=1, units=0,
-               lifespan=5, fertilized=-1,
+               watered=False, unwatered=1, units=1,
+               lifespan=(6 * 24), fertilized=-1,
                unlocked_quadrants=['NW']):
     """Place a plant at (x, y) coordinates (0 indexed coordinates)"""
     tiles = _farm_tiles(unlocked_quadrants)
@@ -38,7 +38,7 @@ def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
         "watered_today": watered,
         "consecutive_unwatered": unwatered,
         "yield_units": units,
-        "max_lifespan_left": lifespan,
+        "max_lifespan_step": lifespan,
         "fertilized_until_day": fertilized
     }
     return tiles
@@ -350,7 +350,7 @@ def test_farmer_on_plant_tile_with_fertilizer():
         ],
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "FERTILIZE"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "FERTILIZE", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": _market_base_buy_actions()
@@ -421,7 +421,7 @@ def test_farmer_on_fertilized_plant_tile():
         ],
         "private": {"inventories": [{"FERTILIZER": 1}, {}], "seeds": {"CARROT": 2}}
     }) == {
-        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG"],
+        "farmer": ["PASS", "NORTH", "SOUTH", "EAST", "WEST", "WATER", "DIG", "HARVEST"],
         "hands": [["PASS", "NORTH", "SOUTH", "EAST", "WEST",
                    "BUILD_COOP", "BUILD_PASTURE", ["PLANT", "CARROT"]]],
         "market": _market_base_buy_actions()

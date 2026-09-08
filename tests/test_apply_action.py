@@ -29,8 +29,8 @@ def _weed_tile(y, x, unlocked_quadrants=['NW']):
 
 
 def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
-               watered=False, unwatered=1, units=0,
-               lifespan=5, fertilized=-1,
+               watered=False, unwatered=1, units=1,
+               lifespan=(6 * 24), fertilized=-1,
                unlocked_quadrants=['NW']):
     """Place a plant at (x, y) coordinates (0 indexed coordinates)"""
     tiles = _farm_tiles(unlocked_quadrants)
@@ -41,7 +41,7 @@ def _plant_tile(y, x, crop="WHEAT", plntd_dy=0,
         "watered_today": watered,
         "consecutive_unwatered": unwatered,
         "yield_units": units,
-        "max_lifespan_left": lifespan,
+        "max_lifespan_step": lifespan,
         "fertilized_until_day": fertilized
     }
     return tiles
@@ -144,7 +144,7 @@ def test_water():
 def test_harvest_plant():
     original_state = {
         "player": 0,
-        "day": 1,
+        "day": 3,
         "hour": 3,
         "farms": [
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=2), "unlocked_quadrants": ['NW']},
@@ -164,7 +164,7 @@ def test_harvest_plant():
 def test_harvest_ongoing_plant():
     original_state = {
         "player": 0,
-        "day": 1,
+        "day": 9,
         "hour": 3,
         "farms": [
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, crop='TOMATO', units=2, lifespan=-1), "unlocked_quadrants": ['NW']},
@@ -373,7 +373,8 @@ def test_feed():
         'market': []
     }
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3, animal="GOOSE", fed=False, unfed=0, fertilizer=True)
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {"WHEAT": 1}
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {}
+    assert _apply_action(original_state, action_dict)['private']['shed'] == {"WHEAT": 1}
 
     
 def test_collect_fertilizer():
@@ -450,7 +451,7 @@ def test_plant_any_crop():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(2, 3, crop="CARROT", lifespan=4)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(2, 3, crop="CARROT", lifespan=96)
     assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 1
 
     
@@ -533,7 +534,7 @@ def test_multiple_action_at_the_same_time():
     }
     assert _apply_action(original_state, action_dict)['private']['inventories'][0] == {"WHEAT": 2}
     assert _apply_action(original_state, action_dict)['private']['shed']['GOOSE'] == 4
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(4, 1, crop="CARROT", lifespan=4)
+    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _plant_tile(4, 1, crop="CARROT", lifespan=96)
     assert _apply_action(original_state, action_dict)['private']['seeds']['CARROT'] == 1
 
     
@@ -553,15 +554,15 @@ def test_multiple_same_action_at_the_same_time():
         'hands': [['PLANT', 'CARROT']],
         'market': []
     }
-    after_actions_farm_tiles = _plant_tile(4, 4, crop="CARROT", lifespan=4)
+    after_actions_farm_tiles = _plant_tile(4, 4, crop="CARROT", lifespan=96)
     after_actions_farm_tiles[4][1] = {
         "kind": "PLANT",
         "crop": "CARROT",
         "planted_day": 0,
         "watered_today": False,
         "consecutive_unwatered": 1,
-        "yield_units": 0,
-        "max_lifespan_left": 4,
+        "yield_units": 1,
+        "max_lifespan_step": 96,
         "fertilized_until_day": -1
     }
     assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == after_actions_farm_tiles
@@ -747,7 +748,8 @@ def test_animal_escaping():
         'market': []
     }
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _animal_tile(2, 3)
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {"WHEAT": 2}
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'][0] == {}
+    assert _apply_action(original_state, action_dict)['private']['shed'] == {"WHEAT": 2}
 
 
 def test_order_count_truncation():
@@ -834,6 +836,7 @@ def test_town_shop_consumption():
 
 
 def test_plant_turning_to_weed_by_decay():
+    """Decay starts one day after the max """
     original_state = {
         "player": 0,
         "day": 6,
@@ -906,13 +909,13 @@ def test_water_increasing_yield():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=2, watered=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=2, watered=True, unwatered=0)
 
 
 def test_water_not_increasing_the_yield():
     original_state = {
         "player": 0,
-        "day": 5,
+        "day": 4,
         "hour": 4,
         "farms": [
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=6), "unlocked_quadrants": ['NW']},
@@ -925,13 +928,13 @@ def test_water_not_increasing_the_yield():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=6, watered=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=6, watered=True, unwatered=0)
 
 
 def test_water_incresing_yield_along_with_fertilizer():
     original_state = {
         "player": 0,
-        "day": 5,
+        "day": 4,
         "hour": 4,
         "farms": [
             {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=1, fertilized=6), "unlocked_quadrants": ['NW']},
@@ -944,7 +947,7 @@ def test_water_incresing_yield_along_with_fertilizer():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=True)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=True, unwatered=0, fertilized=6)
 
 
 def test_entities_inventory_dumping_at_day_refresh():
@@ -963,7 +966,7 @@ def test_entities_inventory_dumping_at_day_refresh():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=False)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=2, watered=False, unwatered=0)
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['shed']['WHEAT'] == 2
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['shed']['CARROT'] == 3
     assert _apply_action(original_state, action_dict, weeds_enabled=False)['private']['inventories'] == [{}, {}]
