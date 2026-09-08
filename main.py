@@ -630,8 +630,12 @@ def _apply_plant(farm, private, pos, crop, day):
         "LOCKED", which _tile_at never returns as None). Otherwise writes a
         fresh PLANT tile: watered_today=False, consecutive_unwatered=1 (a
         new seed's planting day itself counts as its first unwatered day,
-        python-kit/README.md "Watering / Animal Feed"), yield_units=0,
-        fertilized_until_day=-1, and max_lifespan_step set to the turn
+        python-kit/README.md "Watering / Animal Feed"), yield_units=1 for a
+        one-time crop (_ONE_TIME_CROPS) or 0 for an ongoing crop
+        (TOMATO/STRAWBERRY) — per the python-kit engine's _new_plant, a
+        one-time crop is already harvestable the instant it's planted, once
+        _FIRST_YIELD_DAY has elapsed — fertilized_until_day=-1, and
+        max_lifespan_step set to the turn
         number (day * _TURNS_PER_DAY + hour, matching _is_terminal's/
         _get_reward's convention) at which the plant expires — (day +
         _MAX_YIELD_DAY[crop] + 1) * _TURNS_PER_DAY for a one-time crop, or
@@ -654,7 +658,7 @@ def _apply_plant(farm, private, pos, crop, day):
         "planted_day": day,
         "watered_today": False,
         "consecutive_unwatered": 1,
-        "yield_units": 0,
+        "yield_units": 1 if one_time else 0,
         "max_lifespan_step": max_lifespan_step,
         "fertilized_until_day": -1,
     })
