@@ -74,7 +74,7 @@ _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MEL
 _MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 12}  # python-kit engine CROPS table "max_yield_day"; one-time crops only
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _YIELD_BONUS_START = {"WHEAT": 2, "CARROT": 2, "MELON": 6}  # age watering starts growing yield_units; python-kit/README.md L25-29 (ceil(max_yield_day/2) for wheat/carrot), L119-128 (melon's own ages-6-12 window)
-_YIELD_CAPS = {"WHEAT": (4, 6), "CARROT": (3, 4), "MELON": (6, 6)}  # (unfertilized cap, fertilized cap); python-kit/README.md Object Types "Max Yield" column
+_MAX_YIELD = {"WHEAT": 6, "CARROT": 4, "MELON": 6}  # single per-crop yield_units cap regardless of fertilizer; python-kit engine CROPS table "max_yield"
 _WATER_GROWTH = 1  # yield_units added per watered day in the bonus window; python-kit/README.md L119-122
 _FERTILIZED_WATER_GROWTH = 2  # yield_units added per watered day while fertilized; python-kit/README.md L123-124
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
@@ -802,11 +802,14 @@ def _apply_tile_action(farm, pos, action, day):
     Returns:
         None. On a WEED tile: "DIG" clears it to None. On a PLANT tile:
         "WATER" marks it watered for today, and, once the plant is a
-        one-time crop old enough to be in its bonus window
-        (_YIELD_BONUS_START), also grows yield_units by _WATER_GROWTH (or
-        _FERTILIZED_WATER_GROWTH while fertilized), capped at _YIELD_CAPS
-        and never decreasing an already-higher value (python-kit/README.md
-        "Harvest Yields"); "FERTILIZE" sets fertilized_until_day to day + 2,
+        one-time crop whose age is inside its bonus window
+        (_YIELD_BONUS_START[crop] through _MAX_YIELD_DAY[crop] inclusive,
+        matching the python-kit engine's window_start/max_yield_day
+        bounds), also grows yield_units by _WATER_GROWTH (or
+        _FERTILIZED_WATER_GROWTH while fertilized), capped at _MAX_YIELD
+        and never decreasing an already-higher value (python-kit engine's
+        single max_yield cap, not a fertilized/unfertilized tier);
+        "FERTILIZE" sets fertilized_until_day to day + 2,
         a 3-day bonus window starting today (python-kit/README.md); "DIG"
         clears it to None regardless of yield state. On a COOP/PASTURE:
         "DIG" clears it to None — the documented
@@ -842,10 +845,11 @@ def _apply_tile_action(farm, pos, action, day):
         if action == "WATER":
             tile["watered_today"] = True
             crop = tile.get("crop")
-            if crop in _ONE_TIME_CROPS and day - tile.get("planted_day", 0) >= _YIELD_BONUS_START[crop]:
+            age = day - tile.get("planted_day", 0)
+            if crop in _ONE_TIME_CROPS and _YIELD_BONUS_START[crop] <= age <= _MAX_YIELD_DAY[crop]:
                 fertilized = tile.get("fertilized_until_day", -1) >= day
                 growth = _FERTILIZED_WATER_GROWTH if fertilized else _WATER_GROWTH
-                cap = _YIELD_CAPS[crop][1 if fertilized else 0]
+                cap = _MAX_YIELD[crop]
                 current = tile.get("yield_units", 0)
                 if current < cap:
                     tile["yield_units"] = min(cap, current + growth)
