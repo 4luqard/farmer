@@ -71,7 +71,7 @@ _ANIMAL_PRODUCTS = {"GOOSE": "EGG", "COW": "MILK", "SHEEP": "WOOL"}  # python-ki
 _ALL_QUADRANTS = {"NW", "NE", "SW", "SE"}
 _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
-_MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 10}  # python-kit/README.md Object Types "Time to Max Yield"; one-time crops only
+_MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 12}  # python-kit engine CROPS table "max_yield_day"; one-time crops only
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
 _YIELD_BONUS_START = {"WHEAT": 2, "CARROT": 2, "MELON": 6}  # age watering starts growing yield_units; python-kit/README.md L25-29 (ceil(max_yield_day/2) for wheat/carrot), L119-128 (melon's own ages-6-12 window)
 _YIELD_CAPS = {"WHEAT": (4, 6), "CARROT": (3, 4), "MELON": (6, 6)}  # (unfertilized cap, fertilized cap); python-kit/README.md Object Types "Max Yield" column
@@ -631,19 +631,23 @@ def _apply_plant(farm, private, pos, crop, day):
         fresh PLANT tile: watered_today=False, consecutive_unwatered=1 (a
         new seed's planting day itself counts as its first unwatered day,
         python-kit/README.md "Watering / Animal Feed"), yield_units=0,
-        fertilized_until_day=-1, and max_lifespan_left set to
-        _MAX_YIELD_DAY[crop] + 1 for one-time crops (README: one-time crops
-        "reach max lifespan one day after max_yield_day") or -1 for ongoing
-        crops (TOMATO/STRAWBERRY, per the Observation Format schema).
-        Decrements private["seeds"][crop] by 1. The all-or-nothing rule for
-        multiple simultaneous PLANTs of the same crop ("if you try to plant
-        too many in a specific turn, none are planted", README "Plants") is
-        the caller's responsibility — _apply_action only calls this for
-        crops the pre-pass has determined are affordable this turn.
+        fertilized_until_day=-1, and max_lifespan_step set to the turn
+        number (day * _TURNS_PER_DAY + hour, matching _is_terminal's/
+        _get_reward's convention) at which the plant expires — (day +
+        _MAX_YIELD_DAY[crop] + 1) * _TURNS_PER_DAY for a one-time crop, or
+        -1 (never decays) for an ongoing crop (TOMATO/STRAWBERRY) — per the
+        python-kit engine's _new_plant. Decrements private["seeds"][crop]
+        by 1. The
+        all-or-nothing rule for multiple simultaneous PLANTs of the same
+        crop ("if you try to plant too many in a specific turn, none are
+        planted", README "Plants") is the caller's responsibility —
+        _apply_action only calls this for crops the pre-pass has determined
+        are affordable this turn.
     """
     if _tile_at(farm, pos) is not None:
         return
-    max_lifespan_left = _MAX_YIELD_DAY[crop] + 1 if crop in _ONE_TIME_CROPS else -1
+    one_time = crop in _ONE_TIME_CROPS
+    max_lifespan_step = (day + _MAX_YIELD_DAY[crop] + 1) * _TURNS_PER_DAY if one_time else -1
     _set_tile(farm, pos, {
         "kind": "PLANT",
         "crop": crop,
@@ -651,7 +655,7 @@ def _apply_plant(farm, private, pos, crop, day):
         "watered_today": False,
         "consecutive_unwatered": 1,
         "yield_units": 0,
-        "max_lifespan_left": max_lifespan_left,
+        "max_lifespan_step": max_lifespan_step,
         "fertilized_until_day": -1,
     })
     seeds = private.setdefault("seeds", {})
@@ -1187,30 +1191,37 @@ def _apply_market_order(state, farm, private, order):
         _apply_sell(state, farm, private, args[0], args[1] if len(args) > 1 else 1)
 
 
-def _apply_decay(farm, day):
-    """Decay one-time crops past their max lifespan (python-kit/README.md L126-127).
+def _apply_decay(farm, day, hour):
+    """Decay one-time crops past their max lifespan (python-kit engine _decay_plants).
 
     Args:
         farm: The acting player's farm dict, mutated in place; "tiles" is
             scanned for PLANT tiles.
         day: The current in-game day (this must run every turn, not just at
-            day rollover — python-kit/README.md doesn't gate decay on the
-            day-refresh boundary, and tests/test_apply_action.py's
+            day rollover — the engine calls _decay_plants unconditionally
+            every step, and tests/test_apply_action.py's
             test_plant_turning_to_weed_by_decay exercises it mid-day).
+        hour: The current in-game hour, combined with day into the same
+            turn-number convention used by _is_terminal/_get_reward
+            (day * _TURNS_PER_DAY + hour).
 
     Returns:
         None. Each tile is visited at most once, keyed by id() (mirroring
         _clone_state's/_day_refresh's memo, for the same aliased-grid-row
-        reason). A one-time crop (_ONE_TIME_CROPS) whose age
-        (day - planted_day) has reached max_lifespan_left loses 1
+        reason). A one-time crop (_ONE_TIME_CROPS) whose max_lifespan_step
+        (a turn number, not a day count) has been reached loses 1
         yield_units; once yield_units hits 0 the tile becomes a weed.
-        Ongoing crops (max_lifespan_left == -1, the existing sentinel) are
-        untouched — no test yet exercises their production-count-based
-        decay. The "every other turn" decrement cadence (python-kit/
-        README.md L126) is also not exercised by the one given test, so
-        this decrements every call once the threshold is reached; deferred
-        like _day_refresh already defers its own unexercised sub-rules.
+        Ongoing crops (max_lifespan_step == -1, the existing sentinel —
+        never armed by this codebase yet) are untouched — no test yet
+        exercises their production-count-based arming/decay. The python-kit
+        engine's "every other turn" decrement cadence ((step - mls) % 2 ==
+        0) is also not exercised by the one given test
+        (test_plant_turning_to_weed_by_decay uses an odd turn/lifespan
+        parity), so — as before this function's step-unit fix — this still
+        decrements every call once the threshold is reached; deferred like
+        _day_refresh already defers its own unexercised sub-rules.
     """
+    turn = day * _TURNS_PER_DAY + hour
     seen = set()
     for row in farm.get("tiles") or []:
         for x, tile in enumerate(row):
@@ -1219,8 +1230,8 @@ def _apply_decay(farm, day):
             seen.add(id(tile))
             if tile.get("kind") != "PLANT" or tile.get("crop") not in _ONE_TIME_CROPS:
                 continue
-            lifespan = tile.get("max_lifespan_left", -1)
-            if lifespan < 0 or day - tile.get("planted_day", 0) < lifespan:
+            lifespan = tile.get("max_lifespan_step", -1)
+            if lifespan < 0 or turn < lifespan:
                 continue
             units = tile.get("yield_units", 0) - 1
             if units <= 0:
@@ -1515,7 +1526,7 @@ def _apply_action(obs, action_dict, weeds_enabled=True, seed=None):
         _apply_market_order(state, farm, private, order)
 
     _apply_town_consumption(state, hour, day)
-    _apply_decay(farm, day)
+    _apply_decay(farm, day, hour)
 
     hour += 1
     if hour >= _TURNS_PER_DAY:
