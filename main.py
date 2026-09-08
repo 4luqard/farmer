@@ -73,6 +73,10 @@ _SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELO
 _FIRST_YIELD_DAY = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
 _MAX_YIELD_DAY = {"WHEAT": 4, "CARROT": 3, "MELON": 10}  # python-kit/README.md Object Types "Time to Max Yield"; one-time crops only
 _ONE_TIME_CROPS = {"WHEAT", "CARROT", "MELON"}  # python-kit/README.md Object Types table
+_YIELD_BONUS_START = {"WHEAT": 2, "CARROT": 2, "MELON": 6}  # age watering starts growing yield_units; python-kit/README.md L25-29 (ceil(max_yield_day/2) for wheat/carrot), L119-128 (melon's own ages-6-12 window)
+_YIELD_CAPS = {"WHEAT": (4, 6), "CARROT": (3, 4), "MELON": (6, 6)}  # (unfertilized cap, fertilized cap); python-kit/README.md Object Types "Max Yield" column
+_WATER_GROWTH = 1  # yield_units added per watered day in the bonus window; python-kit/README.md L119-122
+_FERTILIZED_WATER_GROWTH = 2  # yield_units added per watered day while fertilized; python-kit/README.md L123-124
 _ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
 _FEED_WHEAT_COST = 1  # WHEAT per FEED; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_feed
 _FERTILIZE_COST = 1  # FERTILIZER per FERTILIZE; no quantity is documented in python-kit/README.md, inferred from tests/test_apply_action.py:test_fertilize (same situation as _FEED_WHEAT_COST)
@@ -789,10 +793,15 @@ def _apply_tile_action(farm, pos, action, day):
 
     Returns:
         None. On a WEED tile: "DIG" clears it to None. On a PLANT tile:
-        "WATER" marks it watered for today; "FERTILIZE" sets
-        fertilized_until_day to day + 2, a 3-day bonus window starting today
-        (python-kit/README.md); "DIG" clears it to None regardless of yield
-        state. On a COOP/PASTURE: "DIG" clears it to None — the documented
+        "WATER" marks it watered for today, and, once the plant is a
+        one-time crop old enough to be in its bonus window
+        (_YIELD_BONUS_START), also grows yield_units by _WATER_GROWTH (or
+        _FERTILIZED_WATER_GROWTH while fertilized), capped at _YIELD_CAPS
+        and never decreasing an already-higher value (python-kit/README.md
+        "Harvest Yields"); "FERTILIZE" sets fertilized_until_day to day + 2,
+        a 3-day bonus window starting today (python-kit/README.md); "DIG"
+        clears it to None regardless of yield state. On a COOP/PASTURE:
+        "DIG" clears it to None — the documented
         no-op for a structure with an animal on it (python-kit/README.md)
         is deferred, since no test exercises it yet. "FEED" marks it
         fed_today for the day — the matching WHEAT deduction is applied
@@ -824,6 +833,14 @@ def _apply_tile_action(farm, pos, action, day):
     elif kind == "PLANT":
         if action == "WATER":
             tile["watered_today"] = True
+            crop = tile.get("crop")
+            if crop in _ONE_TIME_CROPS and day - tile.get("planted_day", 0) >= _YIELD_BONUS_START[crop]:
+                fertilized = tile.get("fertilized_until_day", -1) >= day
+                growth = _FERTILIZED_WATER_GROWTH if fertilized else _WATER_GROWTH
+                cap = _YIELD_CAPS[crop][1 if fertilized else 0]
+                current = tile.get("yield_units", 0)
+                if current < cap:
+                    tile["yield_units"] = min(cap, current + growth)
         elif action == "FERTILIZE":
             tile["fertilized_until_day"] = day + 2
         elif action == "DIG":

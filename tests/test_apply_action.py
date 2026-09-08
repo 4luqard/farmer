@@ -849,7 +849,7 @@ def test_plant_turning_to_weed_by_decay():
         'hands': [['PASS']],
         'market': []
     }
-    assert _apply_action(original_state, action_dict)['farms'][0]['tiles'] == _weed_tile(2, 3)
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _weed_tile(2, 3)
 
 
 def test_fertilizer_appearing():
@@ -888,6 +888,63 @@ def test_random_weed_spawn_chance():
         'market': []
     }
     assert _apply_action(original_state, action_dict, seed=156)['farms'][0]['tiles'] == _weed_tile(1, 2)
+
+
+def test_water_increasing_yield():
+    original_state = {
+        "player": 0,
+        "day": 2,
+        "hour": 4,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=1), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ["WATER"],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=2, watered=True)
+
+
+def test_water_not_increasing_the_yield():
+    original_state = {
+        "player": 0,
+        "day": 5,
+        "hour": 4,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=6), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ["WATER"],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=6, watered=True)
+
+
+def test_water_incresing_yield_along_with_fertilizer():
+    original_state = {
+        "player": 0,
+        "day": 5,
+        "hour": 4,
+        "farms": [
+            {"hires_today": 1, "farmer": [3, 2], "hands": [[1, 4]], "tiles": _plant_tile(2, 3, units=1, fertilized=6), "unlocked_quadrants": ['NW']},
+            {'hires_today': 1, "farmer": [4, 4], "hands": [[5, 4]], "tiles": _plant_tile(2, 3, unlocked_quadrants=['NW', 'NE']), "unlocked_quadrants": ['NW', 'NE']}
+        ],
+        "private": {"seeds": {"CARROT": 2}}
+    }
+    action_dict = {
+        'farmer': ["WATER"],
+        'hands': [['PASS']],
+        'market': []
+    }
+    assert _apply_action(original_state, action_dict, weeds_enabled=False)['farms'][0]['tiles'] == _plant_tile(2, 3, units=3, watered=True)
 
 
 if __name__ == "__main__":
